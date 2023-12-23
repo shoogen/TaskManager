@@ -1,0 +1,20 @@
+## Interface: 100200
+## Version: 1.0.0
+## Title: Task Manager
+## Author: shoogen
+## SavedVariables: TM_TASKS,TM_STATUS,TM_WINDOW
+## AddonCompartmentFunc: TM_AddonCompartmentFunc
+## IconTexture: Interface\Icons\inv_10_inscription_illusoryspellscrolls_color10
+
+Libs\LibStub\LibStub.lua
+Libs\CallbackHandler-1.0\CallbackHandler-1.0.xml
+Libs\AceAddon-3.0\AceAddon-3.0.xml
+Libs\AceEvent-3.0\AceEvent-3.0.xml
+Libs\AceLocale-3.0\AceLocale-3.0.xml
+Libs\LibDataBroker-1.1\LibDataBroker-1.1.lua
+
+Locales\enUS.lua
+
+Bootstrap.lua
+Core.lua
+UI.lua

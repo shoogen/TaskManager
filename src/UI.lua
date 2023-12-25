@@ -450,6 +450,8 @@ function addon:CreateStatusFrame(parent)
             table.insert(menu, { text = L[text], arg1 = f, arg2 = (text == "IgnoreAllTasks"), func = addon.MenuIgnoreAllTasks })
 
             EasyMenu(menu, TM_FRAME.menu, "cursor", 0 , 0, "MENU")
+        elseif IsShiftKeyDown() then
+            addon:MenuIgnoreTask(f, not addon:IsIgnored(f.guid, f.key))
         end
     end)
 

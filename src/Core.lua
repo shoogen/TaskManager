@@ -58,7 +58,7 @@ function addon:UpdateQuest(id)
     return bc ~= entry.completed or be ~= entry.expires or bp ~= entry.progress
 end
 
-function addon:AddQuest(id, title, category, reset)
+function addon:AddQuest(id, title, category, reset, priority)
     if not id then return end
 
     if reset ~= "weekly" and reset ~= "daily" then
@@ -71,17 +71,19 @@ function addon:AddQuest(id, title, category, reset)
         questid = id,
         title = title,
         category = category,
-        reset = reset
+        reset = reset,
+        priority = priority
     }
 
-    addon:UpdateQuest(id)
+    addon:NormalizeTaskPriority()
 end
 
 function addon:RemoveTask(key)
     TM_TASKS[key] = nil
+    addon:NormalizeTaskPriority()
 end
 
-function addon:AddBoss(id, difficulty, boss, title, category, reset)
+function addon:AddBoss(id, difficulty, boss, title, category, reset, priority)
     if not id then return end
     if not difficulty then return end
     if not boss then return end
@@ -93,10 +95,11 @@ function addon:AddBoss(id, difficulty, boss, title, category, reset)
         boss = boss,
         title = title,
         category = category,
-        reset = reset
+        reset = reset,
+        priority = priority
     }
 
-    addon:UpdateBosses()
+    addon:NormalizeTaskPriority()
 end
 
 function addon:UpdateBosses()
@@ -239,4 +242,25 @@ function addon:IsIgnored(guid, key)
 
     -- IgnoreAll
     return toon.info and toon.info.ignored
+end
+
+function addon:NormalizeTaskPriority()
+    local sorted = {}
+
+    -- group the tasks into their category
+    for key, task in pairs(TM_TASKS) do
+        local category = addon:Trim(task.category) or L["MissingCategory"]
+        if not sorted[sorted] then sorted[sorted] = {} end
+        table.insert(sorted[sorted], { sort = task.priority or 0, task = task })
+    end
+
+    for _, array in pairs(sorted) do
+        -- sort the category
+        table.sort(array, function(a, b) return a.sort < b.sort end)
+
+        -- assign the normalized priority
+        for i, entry in ipairs(array) do
+            entry.task.priority = i
+        end
+    end
 end

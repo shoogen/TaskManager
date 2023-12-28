@@ -45,10 +45,12 @@ function addon:ShowWindow(key, refresh)
     TM_WINDOW.key = key
 
     if not TM_FRAME then
+        addon:NormalizeTaskPriority() -- cleanup
         TM_FRAME = addon:CreateMainFrame()
     end
 
     if not refresh then
+        -- TODO remember scroll position when clicking Back button
         TM_FRAME.scrollFrame:SetVerticalScroll(0)
     end
 
@@ -89,6 +91,8 @@ function addon:ShowWindow(key, refresh)
         TM_FRAME.editTitle:SetText("")
         TM_FRAME.editCategory:SetText("")
         TM_FRAME.saveButton:Disable()
+
+        TM_FRAME.priority = 999
 
         TM_FRAME.taskDialog:Show()
     elseif key then
@@ -237,7 +241,7 @@ function addon:CreateTaskFrames()
 
         -- only if visible
         if not COLLAPSED[category] then
-            table.insert(sorted, { category = category, sort = task.questid or task.instanceid, key = key, completed = status and status.completed, ignored = addon:IsIgnored(addon.guid, key) })
+            table.insert(sorted, { category = category, sort = task.priority or 0, key = key, completed = status and status.completed, ignored = addon:IsIgnored(addon.guid, key) })
         end
     end
 
@@ -248,8 +252,7 @@ function addon:CreateTaskFrames()
         end
     end
 
-    -- TODO should allow user-defined ordering
-    -- sort our list by category, then by questid
+    -- sort our list by category, then by priority
     table.sort(sorted, function(a, b)
         if a.category == b.category then
             return a.sort < b.sort
@@ -344,7 +347,9 @@ function addon:CreateTaskFrame(parent)
     end
 
     f.title = f:CreateFontString(nil, "OVERLAY", "GameTooltipText")
+    f.title:SetWordWrap(false)
     f.title:SetPoint("LEFT", f.checkbox, "RIGHT", 50, 0)
+    f.title:SetPoint("RIGHT", -16, 0)
     function f:SetTitle(task, ignored)
         local str = addon:Trim(task.title) or L["MissingTitle"]
         if task.reset and task.reset ~= "never" then
@@ -369,6 +374,7 @@ function addon:CreateTaskFrame(parent)
         end
     end)
 
+    addon:AddGrip(f)
     return f
 end
 
@@ -456,6 +462,78 @@ function addon:CreateStatusFrame(parent)
     end)
 
     return f
+end
+
+function addon:AddGrip(frame)
+    frame:SetMovable(true)
+
+    local grip = CreateFrame("Button", nil, frame)
+    grip:SetPoint("RIGHT", 0, 0)
+    grip:SetSize(16, 16)
+    grip:SetNormalTexture("Interface\\Buttons\\UI-SliderBar-Button-Horizontal")
+    grip:GetNormalTexture():SetAlpha(.25)
+    grip:SetHighlightTexture("Interface\\Buttons\\UI-SliderBar-Button-Horizontal")
+    grip:SetPushedTexture("Interface\\Buttons\\UI-SliderBar-Button-Horizontal")
+
+    grip:SetScript("OnMouseDown", function() addon:DragRow(frame) end)
+    grip:SetScript("OnMouseUp", function() addon:DropRow(frame) end)
+end
+
+function addon:DragRow(frame)
+    frame:SetFrameStrata("HIGH")
+    frame:StartMoving()
+
+    -- TODO should have scrollbar follow the drag
+end
+
+function addon:DropRow(frame)
+    frame:StopMovingOrSizing()
+    local dropped = (frame:GetTop() + frame:GetBottom()) / 2
+
+    -- reset position
+    frame:SetUserPlaced(false)
+    frame:SetFrameStrata("MEDIUM")
+    frame:ClearAllPoints()
+    frame:SetPoint("TOPLEFT", 0, 0)
+    frame:SetPoint("TOPRIGHT", 0, 0)
+
+    -- find out where we were dropped
+    local dest = { diff = 9999999, frame = nil, above = true }
+    for _, f in pairs(TM_FRAME.rows) do
+        if f:IsShown() then
+            local mid = (f:GetTop() + f:GetBottom()) / 2
+            local diff = abs(dropped - mid)
+
+            if diff < dest.diff then
+                dest.diff = diff
+                dest.above = (dropped > mid)
+                dest.frame = f
+            end
+        end
+    end
+
+    -- update the priority
+    local w = dest.frame.widgets
+    if w.task and w.task:IsShown() then
+        -- dropped near another task
+        local task = TM_TASKS[frame.key]
+        local t = TM_TASKS[w.task.key]
+        task.category = t.category
+        task.priority = t.priority + (dest.above and -.1 or .1)
+    elseif w.category and w.category:IsShown() then
+        -- dropped near a category
+        local task = TM_TASKS[frame.key]
+        local category = w.category.Name:GetText()
+        task.category = category
+        task.priority = COLLAPSED[category] and 999 or -1
+    elseif w.status and w.status:IsShown() then
+        -- TODO ability to sort characters
+        -- TODO ability to drag categories?
+        -- TODO ability to rename entire category
+    end
+
+    addon:NormalizeTaskPriority()
+    addon:RefreshWindow()
 end
 
 function addon:CreateAddTaskFrame(f)
@@ -597,11 +675,12 @@ function addon:CreateAddTaskFrame(f)
     f.dropdownReset:SetPoint("LEFT", f.labelReset, "LEFT", 80, 0)
     UIDropDownMenu_SetWidth(f.dropdownReset, 86)
     UIDropDownMenu_SetText(f.dropdownReset, L["daily"])
-    f.dropdownResetValue = "daily"
+    f.dropdownReset.value = "daily"
+    f.priority = 999
     UIDropDownMenu_Initialize(f.dropdownReset, function(frame, level, menuList)
         local info = UIDropDownMenu_CreateInfo()
         info.func = function(self, arg1)
-            f.dropdownResetValue = arg1
+            f.dropdownReset.value = arg1
             UIDropDownMenu_SetText(f.dropdownReset, L[arg1])
         end
 
@@ -634,9 +713,9 @@ function addon:CreateAddTaskFrame(f)
 
         if f.editQuest:IsShown() then
             local quest = f.editQuest:GetNumber()
-            addon:AddQuest(quest, title, category, f.dropdownResetValue)
+            addon:AddQuest(quest, title, category, f.dropdownReset.value, f.priority)
         elseif f.editBoss:IsShown() then
-            addon:AddBoss(f.editBoss.instanceid, f.editBoss.difficulty, f.editBoss.boss, title, category, f.dropdownResetValue)
+            addon:AddBoss(f.editBoss.instanceid, f.editBoss.difficulty, f.editBoss.boss, title, category, f.dropdownReset.value, f.priority)
         end
 
         addon:ShowWindow()
@@ -676,7 +755,8 @@ function addon:MenuEditTask(f)
     TM_FRAME.editCategory:SetText(task.category or "")
     TM_FRAME.saveButton:Enable()
 
-    TM_FRAME.dropdownResetValue = (task.reset or "never")
+    TM_FRAME.priority = (task.priority or 999)
+    TM_FRAME.dropdownReset.value = (task.reset or "never")
     UIDropDownMenu_SetText(TM_FRAME.dropdownReset, L[task.reset])
 end
 

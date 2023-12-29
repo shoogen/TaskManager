@@ -2,6 +2,8 @@ local addonName, addonTable = ...
 local addon = addonTable.addon
 local L = LibStub("AceLocale-3.0"):GetLocale("TaskManager")
 
+local MAXINT = 10 ^ 300
+
 function addon:Expires(reset)
     if reset == "weekly" then
         return time() + C_DateAndTime.GetSecondsUntilWeeklyReset()
@@ -15,7 +17,7 @@ function addon:Expires(reset)
     end
 
     -- default to never
-    return 10 ^ 300
+    return MAXINT
 end
 
 function addon:UpdateQuest(id)
@@ -246,21 +248,29 @@ end
 
 function addon:NormalizeTaskPriority()
     local sorted = {}
+    local categories = {}
 
-    -- group the tasks into their category
+    -- gather tasks and categories
     for key, task in pairs(TM_TASKS) do
-        local category = addon:Trim(task.category) or L["MissingCategory"]
-        if not sorted[sorted] then sorted[sorted] = {} end
-        table.insert(sorted[sorted], { sort = task.priority or 0, task = task })
+        task.category = addon:Trim(task.category) or L["MissingCategory"]
+        task.priority = task.priority or MAXINT
+
+        categories[task.category] = min(task.priority, categories[task.category] or MAXINT)
+        table.insert(sorted, task)
     end
 
-    for _, array in pairs(sorted) do
-        -- sort the category
-        table.sort(array, function(a, b) return a.sort < b.sort end)
-
-        -- assign the normalized priority
-        for i, entry in ipairs(array) do
-            entry.task.priority = i
+    -- sort by category and then priority
+    table.sort(sorted, function(a, b)
+        if a.category == b.category then
+            return a.priority < b.priority
+        else
+            -- position category according to its lowest task
+            return categories[a.category] < categories[b.category]
         end
+    end)
+
+    -- assign the normalized priority
+    for i, task in ipairs(sorted) do
+        task.priority = i
     end
 end

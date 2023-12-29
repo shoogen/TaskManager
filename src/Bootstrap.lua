@@ -80,13 +80,8 @@ SlashCmdList.TASKMANAGER = function(msg)
         return
     end
 
-    if tokens[1] == "boss" then
-        local i = tonumber(tokens[2])
-        local j = tonumber(tokens[3])
-        local k = tonumber(tokens[4])
-
-        addon:AddBoss(i, j, k, "BOSS", "", "never")
-        addon:RefreshWindow()
+    if tokens[1] == "hide" then
+        if TM_FRAME then TM_FRAME:Hide() end
         return
     end
 

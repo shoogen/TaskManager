@@ -2,6 +2,7 @@ local addonName, addonTable = ...
 local addon = addonTable.addon
 local L = LibStub("AceLocale-3.0"):GetLocale("TaskManager")
 
+local MAXINT = 10 ^ 300
 local COLLAPSED = {}
 local COLORS = {
     START = "\124cFF",
@@ -92,7 +93,7 @@ function addon:ShowWindow(key, refresh)
         TM_FRAME.editCategory:SetText("")
         TM_FRAME.saveButton:Disable()
 
-        TM_FRAME.priority = 999
+        TM_FRAME.priority = MAXINT
 
         TM_FRAME.taskDialog:Show()
     elseif key then
@@ -213,12 +214,22 @@ function addon:CreateRowFrame(idx)
                 f:Hide()
             end
 
-            if not w[name] then w[name] = func(addon, row) end
+            if not w[name] then
+                w[name] = func(addon, row)
+                w[name].name = name
+            end
 
             local f = w[name]
             row:SetHeight(f:GetHeight())
             f:Show()
             return f
+        end
+
+        function row:GetCurrentWidget()
+            for _, f in pairs(row.widgets) do
+                if f:IsShown() then return f end
+            end
+            return nil
         end
     end
 
@@ -227,39 +238,39 @@ function addon:CreateRowFrame(idx)
 end
 
 function addon:CreateTaskFrames()
+    addon:NormalizeTaskPriority() -- make sure
+
     local sorted = {}
     local categories = {}
     local count = 0
+
+    -- add tasks to a list
     for key, task in pairs(TM_TASKS) do
-        -- add tasks to the list
-        local status = TM_STATUS[addon.guid][key]
-        local category = addon:Trim(task.category) or L["MissingCategory"]
+        local category = task.category
 
+        -- count # categories
         if not categories[category] then count = count + 1 end
-        if COLLAPSED[category] then count = count + 69 end -- force show
-        categories[category] = true
+        if COLLAPSED[category] then count = 69 end -- force show
 
-        -- only if visible
+        -- assign category priority
+        categories[category] = min(categories[category] or MAXINT, task.priority - .1)
+
+        -- show task only if visible
         if not COLLAPSED[category] then
-            table.insert(sorted, { category = category, sort = task.priority or 0, key = key, completed = status and status.completed, ignored = addon:IsIgnored(addon.guid, key) })
+            local status = TM_STATUS[addon.guid][key]
+            table.insert(sorted, { category = category, sort = task.priority, key = key, completed = status and status.completed, ignored = addon:IsIgnored(addon.guid, key) })
         end
     end
 
     -- only show categories if needed
     if count > 1 then
-        for category, _ in pairs(categories) do
-            table.insert(sorted, { category = category, sort = -1 })
+        for category, priority in pairs(categories) do
+            table.insert(sorted, { category = category, sort = priority })
         end
     end
 
-    -- sort our list by category, then by priority
-    table.sort(sorted, function(a, b)
-        if a.category == b.category then
-            return a.sort < b.sort
-        else
-            return a.category < b.category
-        end
-    end)
+    -- sort our list
+    table.sort(sorted, function(a, b) return a.sort < b.sort end)
 
     -- create rows in UI
     for idx, entry in ipairs(sorted) do
@@ -309,6 +320,7 @@ function addon:CreateCategoryFrame(parent)
         addon:RefreshWindow()
     end)
 
+    addon:AddGrip(f)
     return f
 end
 
@@ -498,7 +510,7 @@ function addon:DropRow(frame)
     frame:SetPoint("TOPRIGHT", 0, 0)
 
     -- find out where we were dropped
-    local dest = { diff = 9999999, frame = nil, above = true }
+    local dest = { diff = MAXINT, frame = nil, above = true }
     for _, f in pairs(TM_FRAME.rows) do
         if f:IsShown() then
             local mid = (f:GetTop() + f:GetBottom()) / 2
@@ -512,25 +524,57 @@ function addon:DropRow(frame)
         end
     end
 
-    -- update the priority
-    local w = dest.frame.widgets
-    if w.task and w.task:IsShown() then
-        -- dropped near another task
+    -- handle move depending on to/from types
+    local widget = dest.frame:GetCurrentWidget()
+    if frame.name == "task" then
+        -- moving a task
         local task = TM_TASKS[frame.key]
-        local t = TM_TASKS[w.task.key]
-        task.category = t.category
-        task.priority = t.priority + (dest.above and -.1 or .1)
-    elseif w.category and w.category:IsShown() then
-        -- dropped near a category
-        local task = TM_TASKS[frame.key]
-        local category = w.category.Name:GetText()
-        task.category = category
-        task.priority = COLLAPSED[category] and 999 or -1
-    elseif w.status and w.status:IsShown() then
-        -- TODO ability to sort characters
-        -- TODO ability to drag categories?
-        -- TODO ability to rename entire category
+
+        if widget.name == "task" then
+            -- dropped near another task
+            local t = TM_TASKS[widget.key]
+            task.category = t.category
+            task.priority = t.priority + (dest.above and -.1 or .1)
+        elseif widget.name == "category" then
+            -- dropped near a category
+            local category = widget.Name:GetText()
+            task.category = category
+            task.priority = COLLAPSED[category] and MAXINT or -1
+        end
+    elseif frame.name == "category" then
+        -- moving an entire category
+        local category = frame.Name:GetText()
+
+        if widget.name == "task" then
+            -- dropped near a task
+            local t = TM_TASKS[widget.key]
+
+            -- assign all tasks in category to be decimals above/below the given task
+            for _, task in pairs(TM_TASKS) do
+                if task.category == category then
+                    task.priority = t.priority + (.0001 * task.priority) + (dest.above and -1 or 0)
+                end
+            end
+        elseif widget.name == "category" then
+            -- dropped near another category
+            local c = widget.Name:GetText()
+
+            -- find min priority of other category
+            local priority = MAXINT
+            for _, task in pairs(TM_TASKS) do
+                if task.category == c then priority = min(priority, task.priority) end
+            end
+
+            -- assign all tasks in category to be decimals above/below the priority
+            for _, task in pairs(TM_TASKS) do
+                if task.category == category then
+                    task.priority = priority + (.0001 * task.priority) + (dest.above and -1 or 0)
+                end
+            end
+        end
     end
+    -- TODO ability to sort characters
+    -- TODO ability to rename entire category
 
     addon:NormalizeTaskPriority()
     addon:RefreshWindow()
@@ -676,7 +720,7 @@ function addon:CreateAddTaskFrame(f)
     UIDropDownMenu_SetWidth(f.dropdownReset, 86)
     UIDropDownMenu_SetText(f.dropdownReset, L["daily"])
     f.dropdownReset.value = "daily"
-    f.priority = 999
+    f.priority = MAXINT
     UIDropDownMenu_Initialize(f.dropdownReset, function(frame, level, menuList)
         local info = UIDropDownMenu_CreateInfo()
         info.func = function(self, arg1)
@@ -755,7 +799,7 @@ function addon:MenuEditTask(f)
     TM_FRAME.editCategory:SetText(task.category or "")
     TM_FRAME.saveButton:Enable()
 
-    TM_FRAME.priority = (task.priority or 999)
+    TM_FRAME.priority = (task.priority or MAXINT)
     TM_FRAME.dropdownReset.value = (task.reset or "never")
     UIDropDownMenu_SetText(TM_FRAME.dropdownReset, L[task.reset])
 end

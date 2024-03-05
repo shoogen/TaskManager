@@ -85,5 +85,11 @@ SlashCmdList.TASKMANAGER = function(msg)
         return
     end
 
+    if tokens[1] == "debug" then
+        local entry = TM_STATUS[addon.guid][tokens[2]]
+        print(date("%m/%d/%y %H:%M:%S", entry.expires))
+        return
+    end
+
     print("Unknown command")
 end

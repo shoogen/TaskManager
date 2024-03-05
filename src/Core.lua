@@ -29,7 +29,12 @@ function addon:UpdateQuest(id)
     local be, bc, bp = entry.expires, entry.completed, entry.progress
 
     -- update quest status
-    entry.expires = addon:Expires(TM_TASKS[key].reset)
+    local reset = C_TaskQuest.GetQuestTimeLeftSeconds(id)
+    if reset and reset > 0 then
+        entry.expires = reset + time()
+    else
+        entry.expires = addon:Expires(TM_TASKS[key].reset)
+    end
 
     if C_QuestLog.IsQuestFlaggedCompleted(id) then
         entry.completed = true

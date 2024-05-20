@@ -467,6 +467,10 @@ function addon:CreateStatusFrame(parent)
             if toon.info.ignored then text = "UnignoreAllTasks" end
             table.insert(menu, { text = L[text], arg1 = f, arg2 = (text == "IgnoreAllTasks"), func = addon.MenuIgnoreAllTasks })
 
+            if f.guid ~= addon.guid then
+                table.insert(menu, { text = L["DeleteCharacter"], arg1 = f, func = addon.MenuDeleteCharacter })
+            end
+
             EasyMenu(menu, TM_FRAME.menu, "cursor", 0 , 0, "MENU")
         elseif IsShiftKeyDown() then
             addon:MenuIgnoreTask(f, not addon:IsIgnored(f.guid, f.key))
@@ -817,6 +821,24 @@ end
 function addon:MenuIgnoreAllTasks(f, ignore)
     addon:IgnoreAllTasks(f.guid, ignore)
     addon:RefreshWindow()
+end
+
+function addon:MenuDeleteCharacter(f)
+    local toon = TM_STATUS[f.guid]
+    StaticPopupDialogs["TM_DELETE_CHARACTER"] = {
+        text = format(L["DeleteCharacterConfirmation"], toon.info.name .. "-" .. toon.info.realm),
+        button1 = YES,
+        button2 = NO,
+        OnAccept = function()
+            addon:DeleteCharacter(f.guid)
+            addon:RefreshWindow()
+        end,
+        timeout = 0,
+        whileDead = true,
+        hideOnEscape = true,
+        preferredIndex = 3
+    }
+    StaticPopup_Show("TM_DELETE_CHARACTER")
 end
 
 function addon:MenuSelectBoss(info)

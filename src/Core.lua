@@ -206,6 +206,10 @@ function addon:PurgeExpired()
     end
 end
 
+function addon:DeleteCharacter(guid)
+    TM_STATUS[guid] = nil
+end
+
 function addon:IgnoreAllTasks(guid, ignore)
     local toon = TM_STATUS[guid]
     if not toon then return end

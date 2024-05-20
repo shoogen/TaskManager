@@ -255,6 +255,29 @@ function addon:IsIgnored(guid, key)
     return toon.info and toon.info.ignored
 end
 
+function addon:TimeLeft(guid, key)
+    local toon = TM_STATUS[guid]
+    if toon then
+        local status = toon[key]
+        if status and status.expires then
+            -- check for never expiring
+            if status.expires == MAXINT then return nil end
+            return status.expires - time()
+        end
+    end
+
+    local task = TM_TASKS[key]
+    if task and task.reset then
+        local expires = addon:Expires(task.reset)
+        if expires > 0 and expires < MAXINT then
+            return expires - time()
+        end
+    end
+
+    -- couldn't determine time left
+    return nil
+end
+
 function addon:NormalizeTaskPriority()
     local sorted = {}
     local categories = {}

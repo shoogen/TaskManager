@@ -36,5 +36,9 @@ L["UnignoreAllTasks"] = "Unignore Character for All Tasks"
 L["DeleteCharacter"] = "Delete Character"
 L["DeleteCharacterConfirmation"] = "Are you sure you want to delete %s?"
 
+L["TimeLeftMinutes"] = "%dm"
+L["TimeLeftHours"] = "%dh"
+L["TimeLeftDays"] = "%dd"
+
 L["EditTask"] = "Edit Task"
 L["RemoveTask"] = "Remove Task"

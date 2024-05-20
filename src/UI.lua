@@ -8,6 +8,8 @@ local COLORS = {
     START = "\124cFF",
     END = "\124r",
 
+    WARN = "fff468",
+
     PROGRESS = "fff468",
     IGNORED = "c0c0c0",
     DONE = "00ffba",
@@ -34,6 +36,17 @@ function addon:Trim(str)
 
     if str == "" then return nil end
     return str
+end
+
+function addon:TimeFriendly(secs)
+    local mins = floor(secs / 60)
+    if mins < 60 then return COLORS.START .. COLORS.WARN .. format(L["TimeLeftMinutes"], mins) .. COLORS.END end
+
+    local hours = floor(mins / 60)
+    if hours < 24 then return format(L["TimeLeftHours"], hours) end
+
+    local days = floor(hours / 24)
+    return format(L["TimeLeftDays"], days)
 end
 
 function addon:RefreshWindow()
@@ -258,7 +271,7 @@ function addon:CreateTaskFrames()
         -- show task only if visible
         if not COLLAPSED[category] then
             local status = TM_STATUS[addon.guid][key]
-            table.insert(sorted, { category = category, sort = task.priority, key = key, completed = status and status.completed, ignored = addon:IsIgnored(addon.guid, key) })
+            table.insert(sorted, { category = category, sort = task.priority, key = key, completed = status and status.completed, ignored = addon:IsIgnored(addon.guid, key), expires = addon:TimeLeft(addon.guid, key) })
         end
     end
 
@@ -281,7 +294,7 @@ function addon:CreateTaskFrames()
             f.key = entry.key
             f.checkbox:SetChecked(entry.completed)
             f:SetSummary(entry.key)
-            f:SetTitle(TM_TASKS[entry.key], entry.ignored)
+            f:SetTitle(TM_TASKS[entry.key], entry.ignored, entry.expires)
         else
             local f = row:ShowWidget("category", addon.CreateCategoryFrame)
             f.Name:SetText(entry.category)
@@ -362,9 +375,11 @@ function addon:CreateTaskFrame(parent)
     f.title:SetWordWrap(false)
     f.title:SetPoint("LEFT", f.checkbox, "RIGHT", 50, 0)
     f.title:SetPoint("RIGHT", -16, 0)
-    function f:SetTitle(task, ignored)
+    function f:SetTitle(task, ignored, expires)
         local str = addon:Trim(task.title) or L["MissingTitle"]
-        if task.reset and task.reset ~= "never" then
+        if expires and expires > 0 then
+            str = str .. " (" .. addon:TimeFriendly(expires) .. ")"
+        elseif task.reset and task.reset ~= "never" then
             str = str .. " (" .. L[task.reset] .. ")"
         end
         if ignored then

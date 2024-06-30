@@ -20,14 +20,53 @@ function addon:Expires(reset)
     return MAXINT
 end
 
-function addon:AddStandard(key, title, category, reset, priority)
+function addon:AddStandardTask(key, title, category, reset, priority)
     if reset ~= "weekly" and reset ~= "daily" then
         -- default to never
         reset = "never"
     end
 
-    key = key or "s" .. tostring(time())
+    key = key or ("s" .. tostring(time()))
     TM_TASKS[key] = {
+        title = title,
+        category = category,
+        reset = reset,
+        priority = priority
+    }
+
+    addon:NormalizeTaskPriority()
+end
+
+function addon:UpdateStandardTask(key, completed, guid)
+    if not addon:IsStandardTask(key) then return false end -- sanity check
+    if not TM_TASKS[key] then return false end -- not tracked
+
+    if not guid then guid = addon.guid end -- default to current character
+
+    if not TM_STATUS[guid][key] then TM_STATUS[guid][key] = {} end
+    local entry = TM_STATUS[guid][key]
+
+    entry.expires = addon:Expires(TM_TASKS[key].reset)
+    entry.completed = completed
+
+    return true
+end
+
+function addon:IsStandardTask(key)
+    return string.sub(key, 1, 1) == "s"
+end
+
+function addon:AddQuestTask(id, title, category, reset, priority)
+    if not id then return end
+
+    if reset ~= "weekly" and reset ~= "daily" then
+        -- default to never
+        reset = "never"
+    end
+
+    local key = "q" .. tostring(id)
+    TM_TASKS[key] = {
+        questid = id,
         title = title,
         category = category,
         reset = reset,
@@ -82,32 +121,7 @@ function addon:UpdateQuest(id)
     return bc ~= entry.completed or be ~= entry.expires or bp ~= entry.progress
 end
 
-function addon:AddQuest(id, title, category, reset, priority)
-    if not id then return end
-
-    if reset ~= "weekly" and reset ~= "daily" then
-        -- default to never
-        reset = "never"
-    end
-
-    local key = "q" .. tostring(id)
-    TM_TASKS[key] = {
-        questid = id,
-        title = title,
-        category = category,
-        reset = reset,
-        priority = priority
-    }
-
-    addon:NormalizeTaskPriority()
-end
-
-function addon:RemoveTask(key)
-    TM_TASKS[key] = nil
-    addon:NormalizeTaskPriority()
-end
-
-function addon:AddBoss(id, difficulty, boss, title, category, reset, priority)
+function addon:AddBossTask(id, difficulty, boss, title, category, reset, priority)
     if not id then return end
     if not difficulty then return end
     if not boss then return end
@@ -165,6 +179,12 @@ function addon:UpdateBosses()
     end
 
     return changed
+end
+
+function addon:RemoveTask(key)
+    TM_TASKS[key] = nil
+    addon:NormalizeTaskPriority()
+    addon:PurgeExpired() -- removes task from characters
 end
 
 function addon:UpdateCharacter()

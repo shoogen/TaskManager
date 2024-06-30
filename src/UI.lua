@@ -270,6 +270,7 @@ function addon:CreateTaskFrames()
             local f = row:ShowWidget("task", addon.CreateTaskFrame)
             f.key = entry.key
             f.checkbox:SetChecked(entry.completed)
+            f.checkbox:SetEnabled(addon:IsStandardTask(entry.key))
             f:SetSummary(entry.key)
             f:SetTitle(TM_TASKS[entry.key], entry.ignored, entry.expires)
         else
@@ -321,10 +322,14 @@ function addon:CreateTaskFrame(parent)
 
     f.checkbox = CreateFrame("CheckButton", nil, f, "UICheckButtonTemplate")
     f.checkbox:SetPoint("TOPLEFT")
-    f.checkbox:Disable()
     f.checkbox:SetDisabledCheckedTexture("Interface\\Buttons\\UI-CheckBox-Check")
     f.checkbox:SetSize(20, 20)
     f:SetHeight(20)
+
+    f.checkbox:SetScript("OnClick", function(self)
+        addon:UpdateStandardTask(f.key, f.checkbox:GetChecked())
+        addon:RefreshWindow()
+    end)
 
     f.summary = f:CreateFontString(nil, "OVERLAY", "GameTooltipText")
     f.summary:SetPoint("LEFT", f.checkbox, "RIGHT")
@@ -424,10 +429,11 @@ function addon:CreateStatusFrames(key)
         local row = addon:CreateRowFrame(idx)
         local f = row:ShowWidget("status", addon.CreateStatusFrame)
 
-        f.checkbox:SetChecked(entry.completed)
-        f.text:SetText(entry.text)
         f.guid = entry.guid
         f.key = key
+        f.checkbox:SetChecked(entry.completed)
+        f.checkbox:SetEnabled(addon:IsStandardTask(key))
+        f.text:SetText(entry.text)
     end
 end
 
@@ -438,10 +444,14 @@ function addon:CreateStatusFrame(parent)
 
     f.checkbox = CreateFrame("CheckButton", nil, f, "UICheckButtonTemplate")
     f.checkbox:SetPoint("TOPLEFT")
-    f.checkbox:Disable()
     f.checkbox:SetDisabledCheckedTexture("Interface\\Buttons\\UI-CheckBox-Check")
     f.checkbox:SetSize(20, 20)
     f:SetHeight(20)
+
+    f.checkbox:SetScript("OnClick", function(self)
+        addon:UpdateStandardTask(f.key, f.checkbox:GetChecked(), f.guid)
+        addon:RefreshWindow()
+    end)
 
     f.text = f:CreateFontString(nil, "OVERLAY", "GameTooltipText")
     f.text:SetPoint("LEFT", f.checkbox, "RIGHT")
@@ -829,11 +839,11 @@ function addon:CreateAddTaskFrame()
 
             if f.editQuest:IsShown() then
                 local quest = f.editQuest:GetNumber()
-                addon:AddQuest(quest, title, category, f.dropdownReset.value, f.priority)
+                addon:AddQuestTask(quest, title, category, f.dropdownReset.value, f.priority)
             elseif f.editBoss:IsShown() then
-                addon:AddBoss(f.editBoss.instanceid, f.editBoss.difficulty, f.editBoss.boss, title, category, f.dropdownReset.value, f.priority)
+                addon:AddBossTask(f.editBoss.instanceid, f.editBoss.difficulty, f.editBoss.boss, title, category, f.dropdownReset.value, f.priority)
             else
-                addon:AddStandard(f.saveButton.key, title, category, f.dropdownReset.value, f.priority)
+                addon:AddStandardTask(f.saveButton.key, title, category, f.dropdownReset.value, f.priority)
             end
 
             addon:ShowWindow()

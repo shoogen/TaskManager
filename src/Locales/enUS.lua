@@ -20,6 +20,7 @@ L["daily"] = "Daily"
 L["weekly"] = "Weekly"
 L["never"] = "Never"
 
+L["standard"] = "Standard"
 L["quest"] = "Quest"
 L["boss"] = "Boss"
 

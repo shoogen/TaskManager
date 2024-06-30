@@ -20,6 +20,23 @@ function addon:Expires(reset)
     return MAXINT
 end
 
+function addon:AddStandard(key, title, category, reset, priority)
+    if reset ~= "weekly" and reset ~= "daily" then
+        -- default to never
+        reset = "never"
+    end
+
+    key = key or "s" .. tostring(time())
+    TM_TASKS[key] = {
+        title = title,
+        category = category,
+        reset = reset,
+        priority = priority
+    }
+
+    addon:NormalizeTaskPriority()
+end
+
 function addon:UpdateQuest(id)
     local key = "q" .. tostring(id)
     if not TM_TASKS[key] then return false end -- not tracked

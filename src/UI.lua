@@ -80,38 +80,12 @@ function addon:ShowWindow(key, refresh)
 
     -- build and show new tab
     if key == "add" then
-        -- Reset Type field
-        UIDropDownMenu_EnableDropDown(TM_FRAME.dropdownType)
-        UIDropDownMenu_SetText(TM_FRAME.dropdownType, L["standard"])
-        TM_FRAME.dropdownType.value = "standard"
-
-        -- Reset Quest field
-        TM_FRAME.labelQuest:Hide()
-
-        TM_FRAME.editQuest:Hide()
-        TM_FRAME.editQuest:Enable()
-        TM_FRAME.editQuest:SetText("")
-
-        -- Reset Boss field(s)
-        TM_FRAME.labelBoss:Hide()
-
-        TM_FRAME.editBoss:Hide()
-        TM_FRAME.editBoss:Enable()
-        TM_FRAME.editBoss:SetText(L["DialogNoBoss"])
-        TM_FRAME.editBoss.instanceid = nil
-        TM_FRAME.editBoss.difficulty = nil
-        TM_FRAME.editBoss.boss = nil
-
-        -- Reset other fields
-        TM_FRAME.labelTitle:SetPoint("TOPLEFT", TM_FRAME.labelType, "BOTTOMLEFT", 0, -20)
-        TM_FRAME.editTitle:SetText("")
-        TM_FRAME.editCategory:SetText("")
-        TM_FRAME.saveButton:Disable()
-        TM_FRAME.saveButton.key = nil
-
-        TM_FRAME.priority = MAXINT
-
         TM_FRAME.taskDialog:Show()
+
+        if not refresh then
+            -- reset the Add Task tab
+            addon:CreateAddTaskFrame()
+        end
     elseif key then
         TM_FRAME.backButton:Show()
         TM_FRAME.header:SetText(TM_TASKS[key].title)
@@ -203,7 +177,7 @@ function addon:CreateMainFrame()
     f.rows = {}
 
     -- Add Task Dialog
-    addon:CreateAddTaskFrame(f)
+    addon:CreateAddTaskFrame()
 
     return f
 end
@@ -602,221 +576,280 @@ function addon:DropRow(frame)
     addon:RefreshWindow()
 end
 
-function addon:CreateAddTaskFrame(f)
-    f.taskDialog = CreateFrame("Frame", nil, f.scrollChild)
-    f.taskDialog:SetPoint("TOPLEFT", 0, 0)
-    f.taskDialog:SetPoint("BOTTOMRIGHT", 0, 0)
+function addon:CreateAddTaskFrame()
+    local f = TM_FRAME
+
+    -- main frame
+    if not f.taskDialog then
+        f.taskDialog = CreateFrame("Frame", nil, f.scrollChild)
+        f.taskDialog:SetPoint("TOPLEFT", 0, 0)
+        f.taskDialog:SetPoint("BOTTOMRIGHT", 0, 0)
+    end
 
     -- Type drop-down
-    f.labelType = f.taskDialog:CreateFontString(nil, "OVERLAY", "GameTooltipText")
-    f.labelType:SetPoint("TOPLEFT", 0, -20)
-    f.labelType:SetText(L["DialogType"])
+    if not f.labelType then
+        f.labelType = f.taskDialog:CreateFontString(nil, "OVERLAY", "GameTooltipText")
+        f.labelType:SetPoint("TOPLEFT", 0, -20)
+        f.labelType:SetText(L["DialogType"])
+    end
 
-    f.dropdownType = CreateFrame("Frame", "TM_FRAME_DROPDOWN_TYPE", f.taskDialog, "UIDropDownMenuTemplate")
-    f.dropdownType:SetPoint("LEFT", f.labelType, "LEFT", 80, 0)
-    UIDropDownMenu_SetWidth(f.dropdownType, 86)
-    UIDropDownMenu_SetText(f.dropdownType, L["standard"])
-    f.dropdownType.value = "standard"
-    UIDropDownMenu_Initialize(f.dropdownType, function(frame, level, menuList)
-        local info = UIDropDownMenu_CreateInfo()
-        info.func = function(self, arg1)
-            local isquest = (arg1 == "quest")
-            f.labelQuest:SetShown(isquest)
-            f.editQuest:SetShown(isquest)
-            f.editQuest:SetText("")
+    if not f.dropdownType then
+        f.dropdownType = CreateFrame("Frame", "TM_FRAME_DROPDOWN_TYPE", f.taskDialog, "UIDropDownMenuTemplate")
+        f.dropdownType:SetPoint("LEFT", f.labelType, "LEFT", 80, 0)
+        UIDropDownMenu_SetWidth(f.dropdownType, 86)
+        UIDropDownMenu_Initialize(f.dropdownType, function(frame, level, menuList)
+            local info = UIDropDownMenu_CreateInfo()
+            info.func = function(self, arg1)
+                local isquest = (arg1 == "quest")
+                f.labelQuest:SetShown(isquest)
+                f.editQuest:SetShown(isquest)
+                f.editQuest:SetText("")
 
-            local isboss = (arg1 == "boss")
-            f.labelBoss:SetShown(isboss)
-            f.editBoss:SetShown(isboss)
-            f.editBoss:SetText(L["DialogNoBoss"])
-            f.editBoss.instanceid = nil
-            f.editBoss.difficulty = nil
-            f.editBoss.boss = nil
+                local isboss = (arg1 == "boss")
+                f.labelBoss:SetShown(isboss)
+                f.editBoss:SetShown(isboss)
+                f.editBoss:SetText(L["DialogNoBoss"])
+                f.editBoss.instanceid = nil
+                f.editBoss.difficulty = nil
+                f.editBoss.boss = nil
 
-            f.editTitle:SetText("")
-            f.saveButton:Disable()
+                f.editTitle:SetText("")
+                f.saveButton:Disable()
 
-            -- adjust positioning
-            if isquest then
-                f.labelTitle:SetPoint("TOPLEFT", f.labelQuest, "BOTTOMLEFT", 0, -20)
-            elseif isboss then
-                f.labelTitle:SetPoint("TOPLEFT", f.labelBoss, "BOTTOMLEFT", 0, -20)
-            else
-                f.labelTitle:SetPoint("TOPLEFT", f.labelType, "BOTTOMLEFT", 0, -20)
-            end
-
-            UIDropDownMenu_SetText(f.dropdownType, L[arg1])
-            f.dropdownType.value = arg1
-        end
-
-        info.arg1, info.text = "standard", L["standard"]
-        UIDropDownMenu_AddButton(info)
-
-        info.arg1, info.text = "quest", L["quest"]
-        UIDropDownMenu_AddButton(info)
-
-        info.arg1, info.text = "boss", L["boss"]
-        UIDropDownMenu_AddButton(info)
-    end)
-
-    -- Quest ID field
-    f.labelQuest = f.taskDialog:CreateFontString(nil, "OVERLAY", "GameTooltipText")
-    f.labelQuest:SetPoint("TOPLEFT", f.labelType, "BOTTOMLEFT", 0, -20)
-    f.labelQuest:SetText(L["DialogQuest"])
-
-    f.editQuest = CreateFrame("EditBox", nil, f.taskDialog, "InputBoxTemplate")
-    f.editQuest:SetSize(100, 22)
-    f.editQuest:SetNumeric(true)
-    f.editQuest:SetAutoFocus(false)
-    f.editQuest:SetPoint("LEFT", f.labelQuest, "LEFT", 100, 0)
-
-    f.editQuest:SetScript("OnTextChanged", function(self, userInput)
-        if not userInput then return end
-
-        local id = self:GetNumber()
-        local title = C_QuestLog.GetTitleForQuestID(id)
-
-        f.saveButton:SetEnabled(id > 0)
-
-        if id < 1 then
-            f.editTitle:SetText("")
-        elseif title then
-            f.editTitle:SetText(title)
-        else
-            f.editTitle:SetText(format(L["MissingQuest"], id))
-            QuestEventListener:AddCallback(id, function()
-                local title = C_QuestLog.GetTitleForQuestID(id)
-                f.editTitle:SetText(title)
-            end)
-        end
-    end)
-
-    -- Boss IDs
-    f.labelBoss = f.taskDialog:CreateFontString(nil, "OVERLAY", "GameTooltipText")
-    f.labelBoss:SetPoint("TOPLEFT", f.labelType, "BOTTOMLEFT", 0, -20)
-    f.labelBoss:SetText(L["DialogBoss"])
-
-    f.editBoss = CreateFrame("Button", nil, f.taskDialog, "UIPanelButtonTemplate")
-    f.editBoss:SetSize(100, 22)
-    f.editBoss:SetText(L["DialogNoBoss"])
-    f.editBoss:SetPoint("LEFT", f.labelBoss, "LEFT", 100, 0)
-    f.editBoss:SetScript("OnClick", function(self, button)
-        local num = GetNumSavedInstances()
-        if num > 0 then
-            local menu = {
-                { text = L["MenuLocks"], isTitle = true }
-            }
-
-            for i = 1, num do
-                local instance, _, _, difficulty, locked, _, _, _, _, difficultyname, bosses, _, _, instanceid = GetSavedInstanceInfo(i)
-                local submenu = {}
-
-                for j = 1, bosses do
-                    local boss, _, _, _ = GetSavedInstanceEncounterInfo(i, j)
-                    local title = instance .. " (" .. difficultyname .. "): " .. boss
-                    table.insert(submenu, { text = boss, arg1 = { instanceid = instanceid, difficulty = difficulty, boss = j, title = title }, func = addon.MenuSelectBoss })
+                -- adjust positioning
+                if isquest then
+                    f.labelTitle:SetPoint("TOPLEFT", f.labelQuest, "BOTTOMLEFT", 0, -20)
+                elseif isboss then
+                    f.labelTitle:SetPoint("TOPLEFT", f.labelBoss, "BOTTOMLEFT", 0, -20)
+                else
+                    f.labelTitle:SetPoint("TOPLEFT", f.labelType, "BOTTOMLEFT", 0, -20)
                 end
 
-                table.insert(menu, { text = instance .. " (" .. difficultyname .. ")", hasArrow = true, keepShownOnClick = true, menuList = submenu })
+                UIDropDownMenu_SetText(f.dropdownType, L[arg1])
+                f.dropdownType.value = arg1
             end
 
-            EasyMenu(menu, TM_FRAME.menu, "cursor", 0 , 0, "MENU")
-        end
-    end)
+            info.arg1, info.text = "standard", L["standard"]
+            UIDropDownMenu_AddButton(info)
+
+            info.arg1, info.text = "quest", L["quest"]
+            UIDropDownMenu_AddButton(info)
+
+            info.arg1, info.text = "boss", L["boss"]
+            UIDropDownMenu_AddButton(info)
+        end)
+    end
+
+    UIDropDownMenu_EnableDropDown(f.dropdownType)
+    UIDropDownMenu_SetText(f.dropdownType, L["standard"])
+    f.dropdownType.value = "standard"
+
+    -- Quest ID field
+    if not f.labelQuest then
+        f.labelQuest = f.taskDialog:CreateFontString(nil, "OVERLAY", "GameTooltipText")
+        f.labelQuest:SetPoint("TOPLEFT", f.labelType, "BOTTOMLEFT", 0, -20)
+        f.labelQuest:SetText(L["DialogQuest"])
+    end
+
+    f.labelQuest:Hide()
+
+    if not f.editQuest then
+        f.editQuest = CreateFrame("EditBox", nil, f.taskDialog, "InputBoxTemplate")
+        f.editQuest:SetSize(100, 22)
+        f.editQuest:SetNumeric(true)
+        f.editQuest:SetAutoFocus(false)
+        f.editQuest:SetPoint("LEFT", f.labelQuest, "LEFT", 100, 0)
+
+        f.editQuest:SetScript("OnTextChanged", function(self, userInput)
+            if not userInput then return end
+
+            local id = self:GetNumber()
+            local title = C_QuestLog.GetTitleForQuestID(id)
+
+            f.saveButton:SetEnabled(id > 0)
+
+            if id < 1 then
+                f.editTitle:SetText("")
+            elseif title then
+                f.editTitle:SetText(title)
+            else
+                f.editTitle:SetText(format(L["MissingQuest"], id))
+                QuestEventListener:AddCallback(id, function()
+                    local title = C_QuestLog.GetTitleForQuestID(id)
+                    f.editTitle:SetText(title)
+                end)
+            end
+        end)
+    end
+
+    f.editQuest:Hide()
+    f.editQuest:Enable()
+    f.editQuest:SetText("")
+
+    -- Boss IDs
+    if not f.labelBoss then
+        f.labelBoss = f.taskDialog:CreateFontString(nil, "OVERLAY", "GameTooltipText")
+        f.labelBoss:SetPoint("TOPLEFT", f.labelType, "BOTTOMLEFT", 0, -20)
+        f.labelBoss:SetText(L["DialogBoss"])
+    end
+
+    f.labelBoss:Hide()
+
+    if not f.editBoss then
+        f.editBoss = CreateFrame("Button", nil, f.taskDialog, "UIPanelButtonTemplate")
+        f.editBoss:SetSize(100, 22)
+        f.editBoss:SetPoint("LEFT", f.labelBoss, "LEFT", 100, 0)
+        f.editBoss:SetScript("OnClick", function(self, button)
+            local num = GetNumSavedInstances()
+            if num > 0 then
+                local menu = {
+                    { text = L["MenuLocks"], isTitle = true }
+                }
+
+                for i = 1, num do
+                    local instance, _, _, difficulty, locked, _, _, _, _, difficultyname, bosses, _, _, instanceid = GetSavedInstanceInfo(i)
+                    local submenu = {}
+
+                    for j = 1, bosses do
+                        local boss, _, _, _ = GetSavedInstanceEncounterInfo(i, j)
+                        local title = instance .. " (" .. difficultyname .. "): " .. boss
+                        table.insert(submenu, { text = boss, arg1 = { instanceid = instanceid, difficulty = difficulty, boss = j, title = title }, func = addon.MenuSelectBoss })
+                    end
+
+                    table.insert(menu, { text = instance .. " (" .. difficultyname .. ")", hasArrow = true, keepShownOnClick = true, menuList = submenu })
+                end
+
+                EasyMenu(menu, TM_FRAME.menu, "cursor", 0 , 0, "MENU")
+            end
+        end)
+    end
+
+    f.editBoss:Hide()
+    f.editBoss:Enable()
+    f.editBoss:SetText(L["DialogNoBoss"])
+    f.editBoss.instanceid = nil
+    f.editBoss.difficulty = nil
+    f.editBoss.boss = nil
 
     -- Title field
-    f.labelTitle = f.taskDialog:CreateFontString(nil, "OVERLAY", "GameTooltipText")
+    if not f.labelTitle then
+        f.labelTitle = f.taskDialog:CreateFontString(nil, "OVERLAY", "GameTooltipText")
+        f.labelTitle:SetText(L["DialogTitle"])
+    end
+
     f.labelTitle:SetPoint("TOPLEFT", f.labelType, "BOTTOMLEFT", 0, -20)
-    f.labelTitle:SetText(L["DialogTitle"])
 
-    f.editTitle = CreateFrame("EditBox", nil, f.taskDialog, "InputBoxTemplate")
-    f.editTitle:SetSize(100, 22)
-    f.editTitle:SetAutoFocus(false)
-    f.editTitle:SetPoint("LEFT", f.labelTitle, "LEFT", 100, 0)
-    f.editTitle:SetPoint("RIGHT", 0, 0)
+    if not f.editTitle then
+        f.editTitle = CreateFrame("EditBox", nil, f.taskDialog, "InputBoxTemplate")
+        f.editTitle:SetSize(100, 22)
+        f.editTitle:SetAutoFocus(false)
+        f.editTitle:SetPoint("LEFT", f.labelTitle, "LEFT", 100, 0)
+        f.editTitle:SetPoint("RIGHT", 0, 0)
 
-    f.editTitle:SetScript("OnTextChanged", function(self, userInput)
-        if not userInput then return end
+        f.editTitle:SetScript("OnTextChanged", function(self, userInput)
+            if not userInput then return end
 
-        if f.dropdownType.value == "standard" then
-            f.saveButton:SetEnabled(string.len(self:GetText()) > 0)
-        end
-    end)
+            if f.dropdownType.value == "standard" then
+                f.saveButton:SetEnabled(string.len(self:GetText()) > 0)
+            end
+        end)
+    end
+
+    f.editTitle:SetText("")
 
     -- Category field
-    f.labelCategory = f.taskDialog:CreateFontString(nil, "OVERLAY", "GameTooltipText")
-    f.labelCategory:SetPoint("TOPLEFT", f.labelTitle, "BOTTOMLEFT", 0, -20)
-    f.labelCategory:SetText(L["DialogCategory"])
+    if not f.labelCategory then
+        f.labelCategory = f.taskDialog:CreateFontString(nil, "OVERLAY", "GameTooltipText")
+        f.labelCategory:SetPoint("TOPLEFT", f.labelTitle, "BOTTOMLEFT", 0, -20)
+        f.labelCategory:SetText(L["DialogCategory"])
+    end
 
-    f.editCategory = CreateFrame("EditBox", nil, f.taskDialog, "InputBoxTemplate")
-    f.editCategory:SetSize(100, 22)
-    f.editCategory:SetAutoFocus(false)
-    f.editCategory:SetPoint("LEFT", f.labelCategory, "LEFT", 100, 0)
-    f.editCategory:SetPoint("RIGHT", 0, 0)
+    if not f.editCategory then
+        f.editCategory = CreateFrame("EditBox", nil, f.taskDialog, "InputBoxTemplate")
+        f.editCategory:SetSize(100, 22)
+        f.editCategory:SetAutoFocus(false)
+        f.editCategory:SetPoint("LEFT", f.labelCategory, "LEFT", 100, 0)
+        f.editCategory:SetPoint("RIGHT", 0, 0)
+    end
+
+    f.editCategory:SetText("")
 
     -- Reset drop-down
-    f.labelReset = f.taskDialog:CreateFontString(nil, "OVERLAY", "GameTooltipText")
-    f.labelReset:SetPoint("TOPLEFT", f.labelCategory, "BOTTOMLEFT", 0, -20)
-    f.labelReset:SetText(L["DialogReset"])
+    if not f.labelReset then
+        f.labelReset = f.taskDialog:CreateFontString(nil, "OVERLAY", "GameTooltipText")
+        f.labelReset:SetPoint("TOPLEFT", f.labelCategory, "BOTTOMLEFT", 0, -20)
+        f.labelReset:SetText(L["DialogReset"])
+    end
 
-    f.dropdownReset = CreateFrame("Frame", "TM_FRAME_DROPDOWN_RESET", f.taskDialog, "UIDropDownMenuTemplate")
-    f.dropdownReset:SetPoint("LEFT", f.labelReset, "LEFT", 80, 0)
-    UIDropDownMenu_SetWidth(f.dropdownReset, 86)
+    if not f.dropdownReset then
+        f.dropdownReset = CreateFrame("Frame", "TM_FRAME_DROPDOWN_RESET", f.taskDialog, "UIDropDownMenuTemplate")
+        f.dropdownReset:SetPoint("LEFT", f.labelReset, "LEFT", 80, 0)
+        UIDropDownMenu_SetWidth(f.dropdownReset, 86)
+        UIDropDownMenu_Initialize(f.dropdownReset, function(frame, level, menuList)
+            local info = UIDropDownMenu_CreateInfo()
+            info.func = function(self, arg1)
+                f.dropdownReset.value = arg1
+                UIDropDownMenu_SetText(f.dropdownReset, L[arg1])
+            end
+
+            info.arg1, info.text = "daily", L["daily"]
+            UIDropDownMenu_AddButton(info)
+
+            info.arg1, info.text = "weekly", L["weekly"]
+            UIDropDownMenu_AddButton(info)
+
+            info.arg1, info.text = "never", L["never"]
+            UIDropDownMenu_AddButton(info)
+        end)
+    end
+
     UIDropDownMenu_SetText(f.dropdownReset, L["daily"])
     f.dropdownReset.value = "daily"
     f.priority = MAXINT
-    UIDropDownMenu_Initialize(f.dropdownReset, function(frame, level, menuList)
-        local info = UIDropDownMenu_CreateInfo()
-        info.func = function(self, arg1)
-            f.dropdownReset.value = arg1
-            UIDropDownMenu_SetText(f.dropdownReset, L[arg1])
-        end
-
-        info.arg1, info.text = "daily", L["daily"]
-        UIDropDownMenu_AddButton(info)
-
-        info.arg1, info.text = "weekly", L["weekly"]
-        UIDropDownMenu_AddButton(info)
-
-        info.arg1, info.text = "never", L["never"]
-        UIDropDownMenu_AddButton(info)
-    end)
 
     -- Save/Cancel Buttons
-    f.cancelButton = CreateFrame("Button", nil, f.taskDialog, "UIPanelButtonTemplate")
-    f.cancelButton:SetSize(80, 22)
-    f.cancelButton:SetText(L["CancelButton"])
-    f.cancelButton:SetPoint("RIGHT", f.taskDialog, "CENTER", -4, 0)
-    f.cancelButton:SetPoint("TOP", f.labelReset, "BOTTOM", 0, -20)
-    f.cancelButton:SetScript("OnClick", function() addon:ShowWindow() end)
+    if not f.cancelButton then
+        f.cancelButton = CreateFrame("Button", nil, f.taskDialog, "UIPanelButtonTemplate")
+        f.cancelButton:SetSize(80, 22)
+        f.cancelButton:SetText(L["CancelButton"])
+        f.cancelButton:SetPoint("RIGHT", f.taskDialog, "CENTER", -4, 0)
+        f.cancelButton:SetPoint("TOP", f.labelReset, "BOTTOM", 0, -20)
+        f.cancelButton:SetScript("OnClick", function() addon:ShowWindow() end)
+    end
 
-    f.saveButton = CreateFrame("Button", nil, f.taskDialog, "UIPanelButtonTemplate")
-    f.saveButton:SetSize(80, 22)
-    f.saveButton:SetText(L["SaveButton"])
-    f.saveButton:SetPoint("LEFT", f.taskDialog, "CENTER", 4, 0)
-    f.saveButton:SetPoint("TOP", f.labelReset, "BOTTOM", 0, -20)
-    f.saveButton:SetScript("OnClick", function()
-        local title = f.editTitle:GetText()
-        local category = f.editCategory:GetText()
+    if not f.saveButton then
+        f.saveButton = CreateFrame("Button", nil, f.taskDialog, "UIPanelButtonTemplate")
+        f.saveButton:SetSize(80, 22)
+        f.saveButton:SetText(L["SaveButton"])
+        f.saveButton:SetPoint("LEFT", f.taskDialog, "CENTER", 4, 0)
+        f.saveButton:SetPoint("TOP", f.labelReset, "BOTTOM", 0, -20)
+        f.saveButton:SetScript("OnClick", function()
+            local title = f.editTitle:GetText()
+            local category = f.editCategory:GetText()
 
-        if f.editQuest:IsShown() then
-            local quest = f.editQuest:GetNumber()
-            addon:AddQuest(quest, title, category, f.dropdownReset.value, f.priority)
-        elseif f.editBoss:IsShown() then
-            addon:AddBoss(f.editBoss.instanceid, f.editBoss.difficulty, f.editBoss.boss, title, category, f.dropdownReset.value, f.priority)
-        else
-            addon:AddStandard(f.saveButton.key, title, category, f.dropdownReset.value, f.priority)
-        end
+            if f.editQuest:IsShown() then
+                local quest = f.editQuest:GetNumber()
+                addon:AddQuest(quest, title, category, f.dropdownReset.value, f.priority)
+            elseif f.editBoss:IsShown() then
+                addon:AddBoss(f.editBoss.instanceid, f.editBoss.difficulty, f.editBoss.boss, title, category, f.dropdownReset.value, f.priority)
+            else
+                addon:AddStandard(f.saveButton.key, title, category, f.dropdownReset.value, f.priority)
+            end
 
-        addon:ShowWindow()
-    end)
+            addon:ShowWindow()
+        end)
+    end
+
+    f.saveButton:Disable()
+    f.saveButton.key = nil
 end
 
 -- Context Menu functions
 function addon:MenuEditTask(f)
+    -- show the Add Task tab
     addon:ShowWindow("add")
-    UIDropDownMenu_DisableDropDown(TM_FRAME.dropdownType)
 
+    -- then fill in the options of the chosen task
     local task = TM_TASKS[f.key]
     if task.instanceid then
         TM_FRAME.dropdownType.value = "boss"
@@ -849,14 +882,14 @@ function addon:MenuEditTask(f)
         TM_FRAME.labelTitle:SetPoint("TOPLEFT", TM_FRAME.labelQuest, "BOTTOMLEFT", 0, -20)
     end
 
+    UIDropDownMenu_DisableDropDown(TM_FRAME.dropdownType)
     TM_FRAME.editTitle:SetText(task.title or "")
     TM_FRAME.editCategory:SetText(task.category or "")
-    TM_FRAME.saveButton:Enable()
-    TM_FRAME.saveButton.key = f.key
-
     TM_FRAME.priority = (task.priority or MAXINT)
     TM_FRAME.dropdownReset.value = (task.reset or "never")
-    UIDropDownMenu_SetText(TM_FRAME.dropdownReset, L[task.reset])
+    UIDropDownMenu_SetText(TM_FRAME.dropdownReset, L[task.reset or "never"])
+    TM_FRAME.saveButton:Enable()
+    TM_FRAME.saveButton.key = f.key
 end
 
 function addon:MenuRemoveTask(f)

@@ -282,27 +282,17 @@ function addon:CreateTaskFrames()
 end
 
 function addon:CreateCategoryFrame(parent)
-    local f = CreateFrame("Button", nil, parent, "TokenButtonTemplate")
+    local f = CreateFrame("Button", nil, parent, "TokenHeaderTemplate")
     f:SetPoint("TOPLEFT", 0, 0)
     f:SetPoint("TOPRIGHT", 0, 0)
 
-    f.Name:SetFontObject("GameFontNormal")
-    f.Name:SetPoint("LEFT", 22, 0)
+    f.elementData = {
+        isHeaderExpanded = true
+    }
 
-    f.Check:Hide()
-    f.LinkButton:Hide()
-
-    f.Highlight:SetTexture("Interface\\TokenFrame\\UI-TokenFrame-CategoryButton")
-    f.Highlight:SetPoint("TOPLEFT", f, "TOPLEFT", 3, -2)
-    f.Highlight:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -3, 2)
-
-    f.ExpandIcon:Show()
     function f:SetCollapsed(collapsed)
-        if collapsed then
-            f.ExpandIcon:SetTexCoord(0, 0.4375, 0, 0.4375)
-        else
-            f.ExpandIcon:SetTexCoord(0.5625, 1, 0, 0.4375)
-        end
+        f.elementData.isHeaderExpanded = not collapsed
+        f:RefreshCollapseIcon()
     end
 
     f:SetScript("OnClick", function()
@@ -372,12 +362,11 @@ function addon:CreateTaskFrame(parent)
 
     f.title:SetScript("OnMouseUp", function(self, button)
         if button == "RightButton" then
-            local menu = {
-                { text = L["EditTask"], arg1 = f, func = addon.MenuEditTask },
-                { text = L["RemoveTask"], arg1 = f, func = addon.MenuRemoveTask }
-            }
-
-            EasyMenu(menu, TM_FRAME.menu, "cursor", 0 , 0, "MENU")
+            UIDropDownMenu_Initialize(TM_FRAME.menu, function(frame, level, menuList)
+                UIDropDownMenu_AddButton({ text = L["EditTask"], arg1 = f, func = addon.MenuEditTask })
+                UIDropDownMenu_AddButton({ text = L["RemoveTask"], arg1 = f, func = addon.MenuRemoveTask })
+            end, "MENU")
+            ToggleDropDownMenu(1, nil, TM_FRAME.menu, f, 0, 0)
         else
             addon:ShowWindow(f.key)
         end
@@ -458,22 +447,22 @@ function addon:CreateStatusFrame(parent)
 
     f.text:SetScript("OnMouseUp", function(self, button)
         if button == "RightButton" then
-            local menu = {}
             local toon = TM_STATUS[f.guid] or { info={} }
 
-            local text = "IgnoreTask"
-            if addon:IsIgnored(f.guid, f.key) then text = "UnignoreTask" end
-            table.insert(menu, { text = L[text], arg1 = f, arg2 = (text == "IgnoreTask"), func = addon.MenuIgnoreTask })
+            UIDropDownMenu_Initialize(TM_FRAME.menu, function(frame, level, menuList)
+                local text = "IgnoreTask"
+                if addon:IsIgnored(f.guid, f.key) then text = "UnignoreTask" end
+                UIDropDownMenu_AddButton({ text = L[text], arg1 = f, arg2 = (text == "IgnoreTask"), func = addon.MenuIgnoreTask })
 
-            text = "IgnoreAllTasks"
-            if toon.info.ignored then text = "UnignoreAllTasks" end
-            table.insert(menu, { text = L[text], arg1 = f, arg2 = (text == "IgnoreAllTasks"), func = addon.MenuIgnoreAllTasks })
+                text = "IgnoreAllTasks"
+                if toon.info.ignored then text = "UnignoreAllTasks" end
+                UIDropDownMenu_AddButton({ text = L[text], arg1 = f, arg2 = (text == "IgnoreAllTasks"), func = addon.MenuIgnoreAllTasks })
 
-            if f.guid ~= addon.guid then
-                table.insert(menu, { text = L["DeleteCharacter"], arg1 = f, func = addon.MenuDeleteCharacter })
-            end
-
-            EasyMenu(menu, TM_FRAME.menu, "cursor", 0 , 0, "MENU")
+                if f.guid ~= addon.guid then
+                    UIDropDownMenu_AddButton({ text = L["DeleteCharacter"], arg1 = f, func = addon.MenuDeleteCharacter })
+                end
+            end, "MENU")
+            ToggleDropDownMenu(1, nil, TM_FRAME.menu, f, 0, 0)
         elseif IsShiftKeyDown() then
             addon:MenuIgnoreTask(f, not addon:IsIgnored(f.guid, f.key))
         end
@@ -608,8 +597,7 @@ function addon:CreateAddTaskFrame()
         f.dropdownType:SetPoint("LEFT", f.labelType, "LEFT", 80, 0)
         UIDropDownMenu_SetWidth(f.dropdownType, 86)
         UIDropDownMenu_Initialize(f.dropdownType, function(frame, level, menuList)
-            local info = UIDropDownMenu_CreateInfo()
-            info.func = function(self, arg1)
+            local func = function(self, arg1)
                 local isquest = (arg1 == "quest")
                 f.labelQuest:SetShown(isquest)
                 f.editQuest:SetShown(isquest)
@@ -639,14 +627,9 @@ function addon:CreateAddTaskFrame()
                 f.dropdownType.value = arg1
             end
 
-            info.arg1, info.text = "standard", L["standard"]
-            UIDropDownMenu_AddButton(info)
-
-            info.arg1, info.text = "quest", L["quest"]
-            UIDropDownMenu_AddButton(info)
-
-            info.arg1, info.text = "boss", L["boss"]
-            UIDropDownMenu_AddButton(info)
+            UIDropDownMenu_AddButton({ text = L["standard"], arg1 = "standard", func = func })
+            UIDropDownMenu_AddButton({ text = L["quest"], arg1 = "quest", func = func })
+            UIDropDownMenu_AddButton({ text = L["boss"], arg1 = "boss", func = func })
         end)
     end
 
@@ -712,24 +695,29 @@ function addon:CreateAddTaskFrame()
         f.editBoss:SetScript("OnClick", function(self, button)
             local num = GetNumSavedInstances()
             if num > 0 then
-                local menu = {
-                    { text = L["MenuLocks"], isTitle = true }
-                }
+                UIDropDownMenu_Initialize(TM_FRAME.menu, function(frame, level, menuList)
+                    if level == 2 then
+                        for idx, entry in ipairs(menuList) do
+                            UIDropDownMenu_AddButton(entry, level)
+                        end
+                    else
+                        UIDropDownMenu_AddButton({ text = L["MenuLocks"], isTitle = true })
 
-                for i = 1, num do
-                    local instance, _, _, difficulty, locked, _, _, _, _, difficultyname, bosses, _, _, instanceid = GetSavedInstanceInfo(i)
-                    local submenu = {}
+                        for i = 1, num do
+                            local instance, _, _, difficulty, locked, _, _, _, _, difficultyname, bosses, _, _, instanceid = GetSavedInstanceInfo(i)
+                            local submenu = {}
 
-                    for j = 1, bosses do
-                        local boss, _, _, _ = GetSavedInstanceEncounterInfo(i, j)
-                        local title = instance .. " (" .. difficultyname .. "): " .. boss
-                        table.insert(submenu, { text = boss, arg1 = { instanceid = instanceid, difficulty = difficulty, boss = j, title = title }, func = addon.MenuSelectBoss })
+                            for j = 1, bosses do
+                                local boss, _, _, _ = GetSavedInstanceEncounterInfo(i, j)
+                                local title = instance .. " (" .. difficultyname .. "): " .. boss
+                                table.insert(submenu, { text = boss, arg1 = { instanceid = instanceid, difficulty = difficulty, boss = j, title = title }, func = addon.MenuSelectBoss })
+                            end
+
+                            UIDropDownMenu_AddButton({ text = instance .. " (" .. difficultyname .. ")", hasArrow = true, keepShownOnClick = true, menuList = submenu })
+                        end
                     end
-
-                    table.insert(menu, { text = instance .. " (" .. difficultyname .. ")", hasArrow = true, keepShownOnClick = true, menuList = submenu })
-                end
-
-                EasyMenu(menu, TM_FRAME.menu, "cursor", 0 , 0, "MENU")
+                end, "MENU")
+                ToggleDropDownMenu(1, nil, TM_FRAME.menu, f.editBoss, 0, 0)
             end
         end)
     end
@@ -796,20 +784,14 @@ function addon:CreateAddTaskFrame()
         f.dropdownReset:SetPoint("LEFT", f.labelReset, "LEFT", 80, 0)
         UIDropDownMenu_SetWidth(f.dropdownReset, 86)
         UIDropDownMenu_Initialize(f.dropdownReset, function(frame, level, menuList)
-            local info = UIDropDownMenu_CreateInfo()
-            info.func = function(self, arg1)
+            local func = function(self, arg1)
                 f.dropdownReset.value = arg1
                 UIDropDownMenu_SetText(f.dropdownReset, L[arg1])
             end
 
-            info.arg1, info.text = "daily", L["daily"]
-            UIDropDownMenu_AddButton(info)
-
-            info.arg1, info.text = "weekly", L["weekly"]
-            UIDropDownMenu_AddButton(info)
-
-            info.arg1, info.text = "never", L["never"]
-            UIDropDownMenu_AddButton(info)
+            UIDropDownMenu_AddButton({ text = L["daily"], arg1 = "daily", func = func })
+            UIDropDownMenu_AddButton({ text = L["weekly"], arg1 = "weekly", func = func })
+            UIDropDownMenu_AddButton({ text = L["never"], arg1 = "never", func = func })
         end)
     end
 
@@ -945,5 +927,5 @@ function addon:MenuSelectBoss(info)
     TM_FRAME.saveButton:Enable()
 
     -- force the menu to close
-    EasyMenu({}, TM_FRAME.menu, "cursor", 0 , 0, "MENU")
+    ToggleDropDownMenu(1, nil, TM_FRAME.menu, nil, 0, 0)
 end

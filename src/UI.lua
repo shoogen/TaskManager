@@ -171,7 +171,9 @@ function addon:CreateMainFrame()
 
     -- Header Text
     f.header = f:CreateFontString(nil, "OVERLAY", "GameTooltipText")
+    f.header:SetWordWrap(false)
     f.header:SetPoint("LEFT", f, "TOPLEFT", 60, -38)
+    f.header:SetPoint("RIGHT", f, "TOPRIGHT", -88, -38)
 
     -- Rows
     f.rows = {}

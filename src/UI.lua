@@ -391,7 +391,7 @@ function addon:CreateStatusFrames(key)
         local realm = ""
         if toon.info.realm ~= myrealm then realm = "-" .. toon.info.realm end
 
-        local text = COLORS.START .. color .. toon.info.level .. " " .. toon.info.name .. realm .. COLORS.END
+        local text = toon.info.level .. " " .. toon.info.name .. realm
         local sort = "a"
         local completed = false
 
@@ -410,6 +410,10 @@ function addon:CreateStatusFrames(key)
         if ignored then
             sort = "z"
             text = COLORS.START .. COLORS.IGNORED .. "-" .. text .. "-" .. COLORS.END
+        elseif guid == addon.guid then
+            text = COLORS.START .. color .. ">" .. text .. "<" .. COLORS.END
+        else
+            text = COLORS.START .. color .. text .. COLORS.END
         end
 
         table.insert(sorted, { text = text, completed = completed, guid = guid, sort = sort .. "#" .. (toon.info.realm or "") .. "#" .. toon.info.name })

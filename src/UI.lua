@@ -75,12 +75,12 @@ function addon:ShowWindow(key, refresh)
 
     TM_FRAME.backButton:Hide()
     TM_FRAME.plusButton:Hide()
-    TM_FRAME.header:Hide()
     TM_FRAME.taskDialog:Hide()
 
     -- build and show new tab
     if key == "add" then
         TM_FRAME.taskDialog:Show()
+        TM_FRAME.header:SetText("")
 
         if not refresh then
             -- reset the Add Task tab
@@ -89,10 +89,13 @@ function addon:ShowWindow(key, refresh)
     elseif key then
         TM_FRAME.backButton:Show()
         TM_FRAME.header:SetText(TM_TASKS[key].title)
-        TM_FRAME.header:Show()
         addon:CreateStatusFrames(key)
     else
+        local toon = TM_STATUS[addon.guid]
+        local color = COLORS[toon.info.class]
+
         TM_FRAME.plusButton:Show()
+        TM_FRAME.header:SetText(COLORS.START .. color .. toon.info.name .. "-" .. toon.info.realm .. COLORS.END)
         addon:CreateTaskFrames()
     end
 
@@ -379,8 +382,6 @@ function addon:CreateTaskFrame(parent)
 end
 
 function addon:CreateStatusFrames(key)
-    local myrealm = TM_STATUS[addon.guid].info.realm
-
     local sorted = {}
     for guid, toon in pairs(TM_STATUS) do
         local ignored = addon:IsIgnored(guid, key)
@@ -388,10 +389,7 @@ function addon:CreateStatusFrames(key)
         local color = COLORS[toon.info.class]
         if ignored then color = COLORS.IGNORED end
 
-        local realm = ""
-        if toon.info.realm ~= myrealm then realm = "-" .. toon.info.realm end
-
-        local text = toon.info.level .. " " .. toon.info.name .. realm
+        local text = toon.info.level .. " " .. toon.info.name .. "-" .. toon.info.realm
         local sort = "a"
         local completed = false
 
@@ -416,7 +414,7 @@ function addon:CreateStatusFrames(key)
             text = COLORS.START .. color .. text .. COLORS.END
         end
 
-        table.insert(sorted, { text = text, completed = completed, guid = guid, sort = sort .. "#" .. (toon.info.realm or "") .. "#" .. toon.info.name })
+        table.insert(sorted, { text = text, completed = completed, guid = guid, sort = sort .. "#" .. toon.info.realm .. "#" .. toon.info.name })
     end
     table.sort(sorted, function(a, b) return a.sort < b.sort end)
 

@@ -46,8 +46,13 @@ function addon:UpdateStandardTask(key, completed, guid)
     if not TM_STATUS[guid][key] then TM_STATUS[guid][key] = {} end
     local entry = TM_STATUS[guid][key]
 
-    entry.expires = addon:Expires(TM_TASKS[key].reset)
-    entry.completed = completed
+    if completed then
+        entry.expires = addon:Expires(TM_TASKS[key].reset)
+        entry.completed = true
+    else
+        entry.expires = nil
+        entry.completed = nil
+    end
 
     return true
 end
@@ -187,6 +192,33 @@ function addon:RemoveTask(key)
     addon:PurgeExpired() -- removes task from characters
 end
 
+function addon:SkipTask(guid, key, skip)
+    if not TM_STATUS[guid][key] then TM_STATUS[guid][key] = {} end
+    local entry = TM_STATUS[guid][key]
+
+    if skip then
+        entry.skipexpires = addon:Expires(TM_TASKS[key].reset)
+        entry.skip = true
+    else
+        entry.skipexpires = nil
+        entry.skip = nil
+    end
+end
+
+function addon:SkipAllTasks(key, skip)
+    for guid, toon in pairs(TM_STATUS) do
+        addon:SkipTask(guid, key, skip)
+    end
+end
+
+function addon:IsSkipped(guid, key)
+    local toon = TM_STATUS[guid]
+    if not toon then return false end
+
+    local status = toon[key]
+    return status and status.skip
+end
+
 function addon:UpdateCharacter()
     if not TM_STATUS[addon.guid] then TM_STATUS[addon.guid] = {} end
     if not TM_STATUS[addon.guid].info then TM_STATUS[addon.guid].info = {} end
@@ -234,10 +266,17 @@ function addon:PurgeExpired()
             if key ~= "info" and not TM_TASKS[key] then
                 -- task was removed
                 TM_STATUS[guid][key] = nil
-            elseif task.expires and task.expires < now then
-                task.completed = nil
-                task.progress = nil
-                task.expires = nil
+            else
+                if task.expires and task.expires < now then
+                    task.completed = nil
+                    task.progress = nil
+                    task.expires = nil
+                end
+
+                if task.skipexpires and task.skipexpires < now then
+                    task.skip = nil
+                    task.skipexpires = nil
+                end
             end
         end
     end

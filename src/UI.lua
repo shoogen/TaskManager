@@ -253,7 +253,7 @@ function addon:CreateTaskFrames()
         -- show task only if visible
         if not COLLAPSED[category] then
             local status = TM_STATUS[addon.guid][key]
-            table.insert(sorted, { category = category, sort = task.priority, key = key, completed = status and status.completed, ignored = addon:IsIgnored(addon.guid, key), expires = addon:TimeLeft(addon.guid, key) })
+            table.insert(sorted, { category = category, sort = task.priority, key = key, checked = status and (status.completed or status.skip), ignored = addon:IsIgnored(addon.guid, key), expires = addon:TimeLeft(addon.guid, key) })
         end
     end
 
@@ -274,7 +274,7 @@ function addon:CreateTaskFrames()
         if entry.key then
             local f = row:ShowWidget("task", addon.CreateTaskFrame)
             f.key = entry.key
-            f.checkbox:SetChecked(entry.completed)
+            f.checkbox:SetChecked(entry.checked)
             f.checkbox:SetEnabled(addon:IsStandardTask(entry.key))
             f:SetSummary(entry.key)
             f:SetTitle(TM_TASKS[entry.key], entry.ignored, entry.expires)
@@ -336,7 +336,7 @@ function addon:CreateTaskFrame(parent)
                 total = total + 1
 
                 local status = toon[key]
-                if status and status.completed then
+                if status and (status.completed or status.skip) then
                     complete = complete + 1
                 end
             end
@@ -368,6 +368,8 @@ function addon:CreateTaskFrame(parent)
     f.title:SetScript("OnMouseUp", function(self, button)
         if button == "RightButton" then
             UIDropDownMenu_Initialize(TM_FRAME.menu, function(frame, level, menuList)
+                UIDropDownMenu_AddButton({ text = L["SkipAllTask"], arg1 = f, arg2 = true, func = addon.MenuSkipAllTask })
+                UIDropDownMenu_AddButton({ text = L["UnskipAllTask"], arg1 = f, arg2 = false, func = addon.MenuSkipAllTask })
                 UIDropDownMenu_AddButton({ text = L["EditTask"], arg1 = f, func = addon.MenuEditTask })
                 UIDropDownMenu_AddButton({ text = L["RemoveTask"], arg1 = f, func = addon.MenuRemoveTask })
             end, "MENU")
@@ -391,13 +393,13 @@ function addon:CreateStatusFrames(key)
 
         local text = toon.info.level .. " " .. toon.info.name .. "-" .. toon.info.realm
         local sort = "a"
-        local completed = false
+        local checked = false
 
         -- determine status
         local status = TM_STATUS[guid][key]
-        if status and status.completed then
+        if status and (status.completed or status.skip) then
             sort = "k"
-            completed = true
+            checked = true
         elseif status and status.progress then
             text = text .. " " .. status.progress
         else
@@ -414,7 +416,7 @@ function addon:CreateStatusFrames(key)
             text = COLORS.START .. color .. text .. COLORS.END
         end
 
-        table.insert(sorted, { text = text, completed = completed, guid = guid, sort = sort .. "#" .. toon.info.realm .. "#" .. toon.info.name })
+        table.insert(sorted, { text = text, checked = checked, guid = guid, sort = sort .. "#" .. toon.info.realm .. "#" .. toon.info.name })
     end
     table.sort(sorted, function(a, b) return a.sort < b.sort end)
 
@@ -424,7 +426,7 @@ function addon:CreateStatusFrames(key)
 
         f.guid = entry.guid
         f.key = key
-        f.checkbox:SetChecked(entry.completed)
+        f.checkbox:SetChecked(entry.checked)
         f.checkbox:SetEnabled(addon:IsStandardTask(key))
         f.text:SetText(entry.text)
     end
@@ -454,7 +456,11 @@ function addon:CreateStatusFrame(parent)
             local toon = TM_STATUS[f.guid] or { info={} }
 
             UIDropDownMenu_Initialize(TM_FRAME.menu, function(frame, level, menuList)
-                local text = "IgnoreTask"
+                local text = "SkipTask"
+                if addon:IsSkipped(f.guid, f.key) then text = "UnskipTask" end
+                UIDropDownMenu_AddButton({ text = L[text], arg1 = f, arg2 = (text == "SkipTask"), func = addon.MenuSkipTask })
+
+                text = "IgnoreTask"
                 if addon:IsIgnored(f.guid, f.key) then text = "UnignoreTask" end
                 UIDropDownMenu_AddButton({ text = L[text], arg1 = f, arg2 = (text == "IgnoreTask"), func = addon.MenuIgnoreTask })
 
@@ -890,6 +896,16 @@ end
 
 function addon:MenuRemoveTask(f)
     addon:RemoveTask(f.key)
+    addon:RefreshWindow()
+end
+
+function addon:MenuSkipTask(f, skip)
+    addon:SkipTask(f.guid, f.key, skip)
+    addon:RefreshWindow()
+end
+
+function addon:MenuSkipAllTask(f, skip)
+    addon:SkipAllTasks(f.key, skip)
     addon:RefreshWindow()
 end
 

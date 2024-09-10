@@ -75,7 +75,7 @@ SlashCmdList.TASKMANAGER = function(msg)
         table.insert(tokens, token)
     end
 
-    if tokens[1] == "show" then
+    if tokens[1] == "show" or not tokens[1] then
         addon:ShowWindow()
         return
     end

@@ -386,37 +386,41 @@ end
 function addon:CreateStatusFrames(key)
     local sorted = {}
     for guid, toon in pairs(TM_STATUS) do
+        local status = TM_STATUS[guid][key]
         local ignored = addon:IsIgnored(guid, key)
+        local checked = status and (status.completed or status.skip)
 
+        -- generate text
+        local text = toon.info.level .. " " .. toon.info.name .. "-" .. toon.info.realm
+        if status and status.progress then
+            text = text .. " " .. status.progress
+        end
+
+        if guid == addon.guid then
+            text = ">" .. text .. "<"
+        elseif ignored then
+            text = "-" .. text .. "-"
+        end
+
+        -- add color
         local color = COLORS[toon.info.class]
         if ignored then color = COLORS.IGNORED end
+        text = COLORS.START .. color .. text .. COLORS.END
 
-        local text = toon.info.level .. " " .. toon.info.name .. "-" .. toon.info.realm
-        local sort = "a"
-        local checked = false
-
-        -- determine status
-        local status = TM_STATUS[guid][key]
-        if status and (status.completed or status.skip) then
-            sort = "k"
-            checked = true
-        elseif status and status.progress then
-            text = text .. " " .. status.progress
-        else
-            sort = "b"
-        end
-
-        -- disable ignored characters
+        -- determine sort
+        local sort = "1"
         if ignored then
-            sort = "z"
-            text = COLORS.START .. COLORS.IGNORED .. "-" .. text .. "-" .. COLORS.END
-        elseif guid == addon.guid then
-            text = COLORS.START .. color .. ">" .. text .. "<" .. COLORS.END
+            sort = "4"
+        elseif checked then
+            sort = "3"
+        elseif status and status.progress then
+            sort = "1"
         else
-            text = COLORS.START .. color .. text .. COLORS.END
+            sort = "2"
         end
+        sort = sort .. "#" .. toon.info.realm .. "#" .. toon.info.name
 
-        table.insert(sorted, { text = text, checked = checked, guid = guid, sort = sort .. "#" .. toon.info.realm .. "#" .. toon.info.name })
+        table.insert(sorted, { text = text, checked = checked, guid = guid, sort = sort })
     end
     table.sort(sorted, function(a, b) return a.sort < b.sort end)
 

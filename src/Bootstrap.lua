@@ -67,6 +67,8 @@ end
 -- Slash commands
 ------------------
 
+local commands = {}
+
 SLASH_TASKMANAGER1 = "/taskmanager"
 SLASH_TASKMANAGER2 = "/tm"
 SlashCmdList.TASKMANAGER = function(msg)
@@ -74,22 +76,42 @@ SlashCmdList.TASKMANAGER = function(msg)
     for token in string.gmatch(msg, "(%w+)") do
         table.insert(tokens, token)
     end
+    if not tokens[1] then tokens[1] = "show" end
 
-    if tokens[1] == "show" or not tokens[1] then
-        addon:ShowWindow()
-        return
+    local command = commands[tokens[1]]
+    if command then
+        command(tokens)
+    else
+        print("Unknown command")
+        -- TODO show list of commands
     end
+end
 
-    if tokens[1] == "hide" then
-        if TM_FRAME then TM_FRAME:Hide() end
-        return
-    end
+commands.show = function(tokens)
+    addon:ShowWindow()
+end
 
-    if tokens[1] == "debug" then
-        local entry = TM_STATUS[addon.guid][tokens[2]]
-        print(date("%m/%d/%y %H:%M:%S", entry.expires))
-        return
-    end
+commands.hide = function(tokens)
+    if TM_FRAME then TM_FRAME:Hide() end
+end
 
-    print("Unknown command")
+commands.debug = function(tokens)
+    local entry = TM_STATUS[addon.guid][tokens[2]]
+    print(date("%m/%d/%y %H:%M:%S", entry.expires))
+end
+
+commands.wod = function(tokens)
+    ShowGarrisonLandingPage(Enum.GarrisonType.Type_6_0_Garrison)
+end
+
+commands.legion = function(tokens)
+    ShowGarrisonLandingPage(Enum.GarrisonType.Type_7_0_Garrison)
+end
+
+commands.bfa = function(tokens)
+    ShowGarrisonLandingPage(Enum.GarrisonType.Type_8_0_Garrison)
+end
+
+commands.sl = function(tokens)
+    ShowGarrisonLandingPage(Enum.GarrisonType.Type_9_0_Garrison)
 end

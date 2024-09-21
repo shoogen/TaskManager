@@ -126,6 +126,48 @@ function addon:UpdateQuest(id)
     return bc ~= entry.completed or be ~= entry.expires or bp ~= entry.progress
 end
 
+function addon:AddProfessionTask(id, title, category, reset, priority)
+    if not id then return end
+
+    if reset ~= "weekly" and reset ~= "daily" then
+        -- default to never
+        reset = "never"
+    end
+
+    local key = "p" .. tostring(id)
+    TM_TASKS[key] = {
+        spellid = id,
+        title = title,
+        category = category,
+        reset = reset,
+        priority = priority
+    }
+
+    addon:NormalizeTaskPriority()
+end
+
+function addon:UpdateProfession(id)
+    local key = "p" .. tostring(id)
+    if not TM_TASKS[key] then return false end -- not tracked
+
+    if not TM_STATUS[addon.guid][key] then TM_STATUS[addon.guid][key] = {} end
+    local entry = TM_STATUS[addon.guid][key]
+    local be, bc, bp = entry.expires, entry.completed
+
+    -- update profession status
+    local info = C_Spell.GetSpellCooldown(id)
+    if info.startTime > 0 then
+        entry.completed = true
+        entry.expires = floor(info.startTime + info.duration - GetTime() + time())
+    else
+        entry.completed = false
+        entry.expires = nil
+    end
+
+    -- return true if anything changed
+    return bc ~= entry.completed or be ~= entry.expires
+end
+
 function addon:AddBossTask(id, difficulty, boss, title, category, reset, priority)
     if not id then return end
     if not difficulty then return end
@@ -245,10 +287,15 @@ function addon:UpdateAll()
     -- character
     changed = addon:UpdateCharacter() or changed
 
-    -- quests
     for key, task in pairs(TM_TASKS) do
+        -- quests
         if task.questid then
             changed = addon:UpdateQuest(task.questid) or changed
+        end
+
+        -- professions
+        if task.spellid then
+            changed = addon:UpdateProfession(task.spellid) or changed
         end
     end
 

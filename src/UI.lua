@@ -617,6 +617,11 @@ function addon:CreateAddTaskFrame()
                 f.editQuest:SetShown(isquest)
                 f.editQuest:SetText("")
 
+                local isprof = (arg1 == "profession")
+                f.labelProfession:SetShown(isprof)
+                f.editProfession:SetShown(isprof)
+                f.editProfession:SetText("")
+
                 local isboss = (arg1 == "boss")
                 f.labelBoss:SetShown(isboss)
                 f.editBoss:SetShown(isboss)
@@ -631,6 +636,8 @@ function addon:CreateAddTaskFrame()
                 -- adjust positioning
                 if isquest then
                     f.labelTitle:SetPoint("TOPLEFT", f.labelQuest, "BOTTOMLEFT", 0, -20)
+                elseif isprof then
+                    f.labelTitle:SetPoint("TOPLEFT", f.labelProfession, "BOTTOMLEFT", 0, -20)
                 elseif isboss then
                     f.labelTitle:SetPoint("TOPLEFT", f.labelBoss, "BOTTOMLEFT", 0, -20)
                 else
@@ -644,6 +651,7 @@ function addon:CreateAddTaskFrame()
             UIDropDownMenu_AddButton({ text = L["standard"], arg1 = "standard", func = func })
             UIDropDownMenu_AddButton({ text = L["quest"], arg1 = "quest", func = func })
             UIDropDownMenu_AddButton({ text = L["boss"], arg1 = "boss", func = func })
+            UIDropDownMenu_AddButton({ text = L["profession"], arg1 = "profession", func = func })
         end)
     end
 
@@ -692,6 +700,44 @@ function addon:CreateAddTaskFrame()
     f.editQuest:Hide()
     f.editQuest:Enable()
     f.editQuest:SetText("")
+
+    -- Profession ID field
+    if not f.labelProfession then
+        f.labelProfession = f.taskDialog:CreateFontString(nil, "OVERLAY", "GameTooltipText")
+        f.labelProfession:SetPoint("TOPLEFT", f.labelType, "BOTTOMLEFT", 0, -20)
+        f.labelProfession:SetText(L["DialogProfession"])
+    end
+
+    f.labelProfession:Hide()
+
+    if not f.editProfession then
+        f.editProfession = CreateFrame("EditBox", nil, f.taskDialog, "InputBoxTemplate")
+        f.editProfession:SetSize(100, 22)
+        f.editProfession:SetNumeric(true)
+        f.editProfession:SetAutoFocus(false)
+        f.editProfession:SetPoint("LEFT", f.labelProfession, "LEFT", 100, 0)
+
+        f.editProfession:SetScript("OnTextChanged", function(self, userInput)
+            if not userInput then return end
+
+            local id = self:GetNumber()
+            local title = C_Spell.GetSpellName(id)
+
+            f.saveButton:SetEnabled(id > 0)
+
+            if id < 1 then
+                f.editTitle:SetText("")
+            elseif title then
+                f.editTitle:SetText(title)
+            else
+                f.editTitle:SetText(format(L["MissingProfession"], id))
+            end
+        end)
+    end
+
+    f.editProfession:Hide()
+    f.editProfession:Enable()
+    f.editProfession:SetText("")
 
     -- Boss IDs
     if not f.labelBoss then
@@ -836,6 +882,9 @@ function addon:CreateAddTaskFrame()
             if f.editQuest:IsShown() then
                 local quest = f.editQuest:GetNumber()
                 addon:AddQuestTask(quest, title, category, f.dropdownReset.value, f.priority)
+            elseif f.editProfession:IsShown() then
+                local spell = f.editProfession:GetNumber()
+                addon:AddProfessionTask(spell, title, category, f.dropdownReset.value, f.priority)
             elseif f.editBoss:IsShown() then
                 addon:AddBossTask(f.editBoss.instanceid, f.editBoss.difficulty, f.editBoss.boss, title, category, f.dropdownReset.value, f.priority)
             else
@@ -886,6 +935,19 @@ function addon:MenuEditTask(f)
 
         -- positioning
         TM_FRAME.labelTitle:SetPoint("TOPLEFT", TM_FRAME.labelQuest, "BOTTOMLEFT", 0, -20)
+    elseif task.spellid then
+        TM_FRAME.dropdownType.value = "profession"
+        UIDropDownMenu_SetText(TM_FRAME.dropdownType, L["profession"])
+
+        -- setup spell id
+        TM_FRAME.labelProfession:Show()
+
+        TM_FRAME.editProfession:Show()
+        TM_FRAME.editProfession:Disable()
+        TM_FRAME.editProfession:SetText(task.spellid or "")
+
+        -- positioning
+        TM_FRAME.labelTitle:SetPoint("TOPLEFT", TM_FRAME.labelProfession, "BOTTOMLEFT", 0, -20)
     end
 
     UIDropDownMenu_DisableDropDown(TM_FRAME.dropdownType)

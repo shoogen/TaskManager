@@ -70,7 +70,8 @@ end
 local commands = {}
 
 SLASH_TASKMANAGER1 = "/taskmanager"
-SLASH_TASKMANAGER2 = "/tm"
+SLASH_TASKMANAGER2 = "/task"
+SLASH_TASKMANAGER3 = "/tm"
 SlashCmdList.TASKMANAGER = function(msg)
     local tokens = {}
     for token in string.gmatch(msg, "(%w+)") do

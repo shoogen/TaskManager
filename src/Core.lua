@@ -3,6 +3,7 @@ local addon = addonTable.addon
 local L = LibStub("AceLocale-3.0"):GetLocale("TaskManager")
 
 local MAXINT = 10 ^ 300
+local SECONDS_PER_DAY = 24 * 60 * 60
 
 function addon:Expires(reset)
     if reset == "weekly" then
@@ -155,10 +156,15 @@ function addon:UpdateProfession(id)
     local be, bc, bp = entry.expires, entry.completed
 
     -- update profession status
-    local info = C_Spell.GetSpellCooldown(id)
-    if info.startTime > 0 then
+    local cooldown, daily, charges, maxCharges = C_TradeSkillUI.GetRecipeCooldown(id)
+    if charges == 0 and cooldown > 0 then
         entry.completed = true
-        entry.expires = floor(info.startTime + info.duration - GetTime() + time())
+
+        if daily and cooldown < SECONDS_PER_DAY then
+            entry.expires = addon:Expires("daily")
+        else
+            entry.expires = floor(cooldown + time())
+        end
     else
         entry.completed = false
         entry.expires = nil

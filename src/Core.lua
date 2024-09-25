@@ -155,6 +155,10 @@ function addon:UpdateProfession(id)
     local entry = TM_STATUS[addon.guid][key]
     local be, bc, bp = entry.expires, entry.completed
 
+    -- check if we have valid cooldown info
+    local exists = select('#', C_TradeSkillUI.GetRecipeCooldown(id))
+    if not exists or exists == 0 then return false end
+
     -- update profession status
     local cooldown, daily, charges, maxCharges = C_TradeSkillUI.GetRecipeCooldown(id)
     if charges == 0 and cooldown > 0 then

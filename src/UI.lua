@@ -253,7 +253,8 @@ function addon:CreateTaskFrames()
         -- show task only if visible
         if not COLLAPSED[category] then
             local status = TM_STATUS[addon.guid][key]
-            table.insert(sorted, { category = category, sort = task.priority, key = key, checked = status and (status.completed or status.skip), ignored = addon:IsIgnored(addon.guid, key), expires = addon:TimeLeft(addon.guid, key) })
+            local expires = addon:TimeLeft(addon.guid, key) -- TODO professions can have different timers for each character
+            table.insert(sorted, { category = category, sort = task.priority, key = key, checked = status and (status.completed or status.skip), ignored = addon:IsIgnored(addon.guid, key), expires = expires })
         end
     end
 

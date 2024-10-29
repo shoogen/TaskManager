@@ -93,9 +93,13 @@ function addon:ShowWindow(key, refresh)
     else
         local toon = TM_STATUS[addon.guid]
         local color = COLORS[toon.info.class]
+        local realm = ""
+        if toon.info.realm then
+            realm = "-" .. toon.info.realm
+        end
 
         TM_FRAME.plusButton:Show()
-        TM_FRAME.header:SetText(COLORS.START .. color .. toon.info.name .. "-" .. toon.info.realm .. COLORS.END)
+        TM_FRAME.header:SetText(COLORS.START .. color .. toon.info.name .. "-" .. realm .. COLORS.END)
         addon:CreateTaskFrames()
     end
 

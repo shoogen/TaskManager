@@ -161,7 +161,7 @@ function addon:UpdateProfession(id)
 
     -- update profession status
     local cooldown, daily, charges, maxCharges = C_TradeSkillUI.GetRecipeCooldown(id)
-    if charges == 0 and cooldown > 0 then
+    if charges and charges == 0 and cooldown and cooldown > 0 then
         entry.completed = true
 
         if daily and cooldown < SECONDS_PER_DAY then

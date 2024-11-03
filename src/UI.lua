@@ -99,7 +99,7 @@ function addon:ShowWindow(key, refresh)
         end
 
         TM_FRAME.plusButton:Show()
-        TM_FRAME.header:SetText(COLORS.START .. color .. toon.info.name .. "-" .. realm .. COLORS.END)
+        TM_FRAME.header:SetText(COLORS.START .. color .. toon.info.name .. realm .. COLORS.END)
         addon:CreateTaskFrames()
     end
 

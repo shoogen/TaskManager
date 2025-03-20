@@ -238,6 +238,43 @@ function addon:UpdateBosses()
     return changed
 end
 
+function addon:AddVaultTask(title, category, reset, priority)
+    local key = "vault"
+    TM_TASKS[key] = {
+        title = title,
+        category = category,
+        reset = reset,
+        priority = priority
+    }
+
+    addon:NormalizeTaskPriority()
+end
+
+function addon:UpdateVaults()
+    local key = "vault"
+
+    if TM_TASKS[key] then
+        -- update status
+        if not TM_STATUS[addon.guid][key] then TM_STATUS[addon.guid][key] = {} end
+        local entry = TM_STATUS[addon.guid][key]
+        local be, bc = entry.expires, entry.completed
+
+        entry.completed = not C_WeeklyRewards.HasAvailableRewards() or not C_WeeklyRewards.CanClaimRewards()
+
+        -- reset next week ONLY if rewards are available
+        entry.expires = addon:Expires("never")
+        local rewards = C_WeeklyRewards.GetActivities()
+        for i, reward in ipairs(rewards) do
+            if reward.progress >= reward.threshold then
+                entry.expires = addon:Expires("weekly")
+                break
+            end
+        end
+
+        changed = changed or bc ~= entry.completed or be ~= entry.expires
+    end
+end
+
 function addon:RemoveTask(key)
     TM_TASKS[key] = nil
     addon:NormalizeTaskPriority()
@@ -311,6 +348,9 @@ function addon:UpdateAll()
 
     -- instances
     changed = addon:UpdateBosses() or changed
+
+    -- great vault
+    changed = addon:UpdateVaults() or changed
 
     return changed
 end

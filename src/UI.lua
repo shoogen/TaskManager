@@ -657,6 +657,7 @@ function addon:CreateAddTaskFrame()
             UIDropDownMenu_AddButton({ text = L["quest"], arg1 = "quest", func = func })
             UIDropDownMenu_AddButton({ text = L["boss"], arg1 = "boss", func = func })
             UIDropDownMenu_AddButton({ text = L["profession"], arg1 = "profession", func = func })
+            UIDropDownMenu_AddButton({ text = L["vault"], arg1 = "vault", func = func })
         end)
     end
 
@@ -812,7 +813,7 @@ function addon:CreateAddTaskFrame()
         f.editTitle:SetScript("OnTextChanged", function(self, userInput)
             if not userInput then return end
 
-            if f.dropdownType.value == "standard" then
+            if f.dropdownType.value == "standard" or f.dropdownType.value == "vault" then
                 f.saveButton:SetEnabled(string.len(self:GetText()) > 0)
             end
         end)
@@ -892,6 +893,8 @@ function addon:CreateAddTaskFrame()
                 addon:AddProfessionTask(spell, title, category, f.dropdownReset.value, f.priority)
             elseif f.editBoss:IsShown() then
                 addon:AddBossTask(f.editBoss.instanceid, f.editBoss.difficulty, f.editBoss.boss, title, category, f.dropdownReset.value, f.priority)
+            elseif f.dropdownType.value == "vault" then
+                addon:AddVaultTask(title, category, f.dropdownReset.value, f.priority)
             else
                 addon:AddStandardTask(f.saveButton.key, title, category, f.dropdownReset.value, f.priority)
             end
@@ -953,6 +956,9 @@ function addon:MenuEditTask(f)
 
         -- positioning
         TM_FRAME.labelTitle:SetPoint("TOPLEFT", TM_FRAME.labelProfession, "BOTTOMLEFT", 0, -20)
+    elseif f.key == "vault" then
+        TM_FRAME.dropdownType.value = "vault"
+        UIDropDownMenu_SetText(TM_FRAME.dropdownType, L["vault"])
     end
 
     UIDropDownMenu_DisableDropDown(TM_FRAME.dropdownType)

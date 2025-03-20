@@ -25,6 +25,7 @@ L["standard"] = "Standard"
 L["quest"] = "Quest"
 L["boss"] = "Boss"
 L["profession"] = "Profession"
+L["vault"] = "Great Vault"
 
 L["ProgressOnQuest"] = "On Quest"
 L["MissingQuest"] = "Missing Quest Title #%d"

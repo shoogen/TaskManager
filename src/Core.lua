@@ -259,7 +259,7 @@ function addon:UpdateVaults()
         local entry = TM_STATUS[addon.guid][key]
         local be, bc = entry.expires, entry.completed
 
-        entry.completed = not C_WeeklyRewards.HasAvailableRewards() or not C_WeeklyRewards.CanClaimRewards()
+        entry.completed = not (C_WeeklyRewards.HasAvailableRewards() or C_WeeklyRewards.CanClaimRewards())
 
         -- reset next week ONLY if rewards are available
         entry.expires = addon:Expires("never")
@@ -271,8 +271,11 @@ function addon:UpdateVaults()
             end
         end
 
-        changed = changed or bc ~= entry.completed or be ~= entry.expires
+        -- return true if anything changed
+        return bc ~= entry.completed or be ~= entry.expires
     end
+
+    return false
 end
 
 function addon:RemoveTask(key)

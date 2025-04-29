@@ -501,22 +501,50 @@ function addon:AddGrip(frame)
     grip:SetHighlightTexture("Interface\\Buttons\\UI-SliderBar-Button-Horizontal")
     grip:SetPushedTexture("Interface\\Buttons\\UI-SliderBar-Button-Horizontal")
 
-    grip:SetScript("OnMouseDown", function() addon:DragRow(frame) end)
-    grip:SetScript("OnMouseUp", function() addon:DropRow(frame) end)
+    grip:SetScript("OnMouseDown", function(self, button) if button == "LeftButton" then addon:DragRow(frame) end end)
+    grip:SetScript("OnMouseUp", function(self, button) if button == "LeftButton" then addon:DropRow(frame) end end)
 end
 
 function addon:DragRow(frame)
     frame:SetFrameStrata("HIGH")
     frame:StartMoving()
 
-    -- TODO should have scrollbar follow the drag
+    -- just in case, cancel any previous timer
+    if frame.dragtimer then
+        frame.dragtimer:Cancel()
+    end
+
+    -- setup new timer to move scrollbar when dragging to edge
+    local scrollFrame = TM_FRAME.scrollFrame
+    local max = scrollFrame:GetVerticalScrollRange()
+
+    frame.dragtimer = C_Timer.NewTicker(0.1, function()
+        if not IsMouseButtonDown("LeftButton") then
+            -- not sure why this happens, but cancel the timer if mouse is no longer down
+            frame.dragtimer:Cancel()
+        elseif frame:GetTop() > scrollFrame:GetTop() then
+            -- scroll up
+            local amount = frame:GetTop() - scrollFrame:GetTop()
+            local to = scrollFrame:GetVerticalScroll() - amount
+            if to < 0 then to = 0 end
+            scrollFrame:SetVerticalScroll(to)
+        elseif frame:GetBottom() < scrollFrame:GetBottom() then
+            -- scroll down
+            local amount = scrollFrame:GetBottom() - frame:GetBottom()
+            local to = scrollFrame:GetVerticalScroll() + amount
+            if to > max then to = max end
+            scrollFrame:SetVerticalScroll(to)
+        end
+    end)
 end
 
 function addon:DropRow(frame)
-    frame:StopMovingOrSizing()
     local dropped = (frame:GetTop() + frame:GetBottom()) / 2
 
     -- reset position
+    frame.dragtimer:Cancel()
+
+    frame:StopMovingOrSizing()
     frame:SetUserPlaced(false)
     frame:SetFrameStrata("MEDIUM")
     frame:ClearAllPoints()
@@ -563,10 +591,13 @@ function addon:DropRow(frame)
             -- dropped near a task
             local t = TM_TASKS[widget.key]
 
-            -- assign all tasks in category to be decimals above/below the given task
-            for _, task in pairs(TM_TASKS) do
-                if task.category == category then
-                    task.priority = t.priority + (.0001 * task.priority) + (dest.above and -1 or 0)
+            -- make sure it wasn't dropped inside itself
+            if t.category ~= category then
+                 -- assign all tasks in category to be decimals above/below the given task
+                for _, task in pairs(TM_TASKS) do
+                    if task.category == category then
+                        task.priority = t.priority + (.0001 * task.priority) + (dest.above and -1 or 0)
+                    end
                 end
             end
         elseif widget.name == "category" then

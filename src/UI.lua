@@ -1,5 +1,6 @@
 local addonName, addonTable = ...
 local addon = addonTable.addon
+local events = {}
 local L = LibStub("AceLocale-3.0"):GetLocale("TaskManager")
 
 local MAXINT = 10 ^ 300
@@ -106,6 +107,13 @@ function addon:ShowWindow(key, refresh)
     TM_FRAME:Show()
 end
 
+-- not sure why, but we need to manually wire up the drop-down so it auto-closes
+function events:GLOBAL_MOUSE_DOWN(button)
+    if TM_FRAME and UIDROPDOWNMENU_OPEN_MENU == TM_FRAME.menu then
+        UIDropDownMenu_HandleGlobalMouseEvent(button, "GLOBAL_MOUSE_DOWN")
+    end
+end
+
 function addon:CreateMainFrame()
     local f = CreateFrame("Frame", "TM_FRAME", UIParent, "PortraitFrameTemplate")
     f:SetTitle(L["Title"])
@@ -117,6 +125,10 @@ function addon:CreateMainFrame()
     else
         f:SetPoint("CENTER")
     end
+
+    -- events
+    f:RegisterEvent("GLOBAL_MOUSE_DOWN")
+    f:SetScript("OnEvent", function(self, event, ...) events[event](self, ...) end)
 
     -- Movable
     f:SetMovable(true)
@@ -378,7 +390,7 @@ function addon:CreateTaskFrame(parent)
                 UIDropDownMenu_AddButton({ text = L["EditTask"], arg1 = f, func = addon.MenuEditTask })
                 UIDropDownMenu_AddButton({ text = L["RemoveTask"], arg1 = f, func = addon.MenuRemoveTask })
             end, "MENU")
-            ToggleDropDownMenu(1, nil, TM_FRAME.menu, f, 0, 0)
+            ToggleDropDownMenu(1, nil, TM_FRAME.menu, "cursor", 0, 0)
         else
             addon:ShowWindow(f.key)
         end
@@ -481,7 +493,7 @@ function addon:CreateStatusFrame(parent)
                     UIDropDownMenu_AddButton({ text = L["DeleteCharacter"], arg1 = f, func = addon.MenuDeleteCharacter })
                 end
             end, "MENU")
-            ToggleDropDownMenu(1, nil, TM_FRAME.menu, f, 0, 0)
+            ToggleDropDownMenu(1, nil, TM_FRAME.menu, "cursor", 0, 0)
         elseif IsShiftKeyDown() then
             addon:MenuIgnoreTask(f, not addon:IsIgnored(f.guid, f.key))
         end
@@ -1055,5 +1067,5 @@ function addon:MenuSelectBoss(info)
     TM_FRAME.saveButton:Enable()
 
     -- force the menu to close
-    ToggleDropDownMenu(1, nil, TM_FRAME.menu, nil, 0, 0)
+    CloseDropDownMenus()
 end

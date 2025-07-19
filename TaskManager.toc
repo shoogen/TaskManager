@@ -4,6 +4,7 @@
 ## Interface: 110107
 ## Version: @project-version@
 ## X-Curse-Project-ID: 949024
+## X-Wago-ID: mKOvlW6x
 ## SavedVariables: TM_TASKS,TM_STATUS,TM_WINDOW
 ## AddonCompartmentFunc: TM_AddonCompartmentFunc
 

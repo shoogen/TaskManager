@@ -1,10 +1,11 @@
-## Interface: 110107
-## Version: 1.0.0
 ## Title: Task Manager
 ## Author: shoogen
+## IconTexture: Interface\Icons\inv_10_inscription_illusoryspellscrolls_color10
+## Interface: 110107
+## Version: @project-version@
+## X-Curse-Project-ID: 949024
 ## SavedVariables: TM_TASKS,TM_STATUS,TM_WINDOW
 ## AddonCompartmentFunc: TM_AddonCompartmentFunc
-## IconTexture: Interface\Icons\inv_10_inscription_illusoryspellscrolls_color10
 
 Libs\LibStub\LibStub.lua
 Libs\CallbackHandler-1.0\CallbackHandler-1.0.xml

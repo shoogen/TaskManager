@@ -18,5 +18,8 @@ Advanced Tips:
 - You can ignore characters by right-clicking their name to get an options menu. You can also shift-click their name as a shortcut.
 - You can re-order your tasks by using the drag-and-drop icon on the right side.
 
+## Special Thanks
+- ZamestoTV - Localization and translation
+
 ## CurseForge
 [https://www.curseforge.com/wow/addons/taskmanager](https://www.curseforge.com/wow/addons/taskmanager)

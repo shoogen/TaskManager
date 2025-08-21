@@ -115,3 +115,10 @@ end
 commands.sl = function(tokens)
     ShowGarrisonLandingPage(Enum.GarrisonType.Type_9_0_Garrison)
 end
+
+commands.cloak = function(tokens)
+    GenericTraitUI_LoadUI()
+    GenericTraitFrame:SetSystemID(29)
+    GenericTraitFrame:SetTreeID(1115)
+    ToggleFrame(GenericTraitFrame)
+end

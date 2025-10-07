@@ -1,7 +1,7 @@
 ## Title: Task Manager
 ## Author: shoogen
 ## IconTexture: Interface\Icons\inv_10_inscription_illusoryspellscrolls_color10
-## Interface: 110200
+## Interface: 110205
 ## Version: @project-version@
 ## X-Curse-Project-ID: 949024
 ## X-Wago-ID: mKOvlW6x

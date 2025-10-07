@@ -314,7 +314,7 @@ function addon:CreateCategoryFrame(parent)
 
     function f:SetCollapsed(collapsed)
         f.elementData.isHeaderExpanded = not collapsed
-        f:RefreshCollapseIcon()
+        --f:RefreshCollapseIcon()
     end
 
     f:SetScript("OnClick", function()

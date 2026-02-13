@@ -15,7 +15,7 @@ function addon:OnInitialize()
     -- TODO and/or use import strings so people can share QuestIDs they find
     if not TM_TASKS then TM_TASKS = {} end
     if not TM_STATUS then TM_STATUS = {} end
-    if not TM_WINDOW then TM_WINDOW = { width = 333, height = 500 } end
+    if not TM_WINDOW then TM_WINDOW = { width = 333, height = 500, scale = 1.0 } end
 
     LibStub:GetLibrary("LibDataBroker-1.1"):NewDataObject(L["Title"], {
         type = "launcher",
@@ -73,7 +73,7 @@ SLASH_TASKMANAGER1 = "/taskmanager"
 SLASH_TASKMANAGER2 = "/task"
 SlashCmdList.TASKMANAGER = function(msg)
     local tokens = {}
-    for token in string.gmatch(msg, "(%w+)") do
+    for token in string.gmatch(msg, "(%S+)") do
         table.insert(tokens, token)
     end
     if not tokens[1] then tokens[1] = "show" end
@@ -121,4 +121,13 @@ commands.cloak = function(tokens)
     GenericTraitFrame:SetSystemID(29)
     GenericTraitFrame:SetTreeID(1115)
     ToggleFrame(GenericTraitFrame)
+end
+
+commands.scale = function(tokens)
+    if tokens[2] and tonumber(tokens[2]) then
+        TM_FRAME:SetScale(tonumber(tokens[2]))
+        TM_WINDOW["scale"] = tonumber(tokens[2])
+    else
+        print("/task scale <number>")
+    end
 end

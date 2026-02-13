@@ -10,12 +10,13 @@ addonTable.addon = addon
 
 function addon:OnInitialize()
     addon.guid = UnitGUID("player") -- cache guid call
+    addon.initialized = false
 
     -- TODO back up config in case of crash?
     -- TODO and/or use import strings so people can share QuestIDs they find
     if not TM_TASKS then TM_TASKS = {} end
     if not TM_STATUS then TM_STATUS = {} end
-    if not TM_WINDOW then TM_WINDOW = { width = 333, height = 500, scale = 1.0 } end
+    if not TM_WINDOW then TM_WINDOW = { width = 333, height = 500, scale = 1.0, opened = false } end
 
     LibStub:GetLibrary("LibDataBroker-1.1"):NewDataObject(L["Title"], {
         type = "launcher",
@@ -37,6 +38,10 @@ function addon:OnEnable()
             addon:PurgeExpired() -- could be daily
             local changed = addon:UpdateAll()
             if changed then addon:RefreshWindow() end
+            if TM_WINDOW.opened and not addon.initialized then
+                addon:ShowWindow()
+                addon.initialized = true
+            end
         end
 
         --local finish = debugprofilestop()
@@ -57,8 +62,10 @@ end
 
 function TM_AddonCompartmentFunc(addonName, buttonName, menuButtonFrame)
     if TM_FRAME and TM_FRAME:IsShown() then
+        TM_WINDOW.opened = false
         TM_FRAME:Hide()
     else
+        TM_WINDOW.opened = true
         addon:ShowWindow()
     end
 end

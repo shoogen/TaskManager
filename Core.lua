@@ -178,6 +178,52 @@ function addon:UpdateProfession(id)
     return bc ~= entry.completed or be ~= entry.expires
 end
 
+function addon:AddItemTask(id, title, category, reset, priority)
+    if not id then return end
+
+    if reset ~= "weekly" and reset ~= "daily" then
+        -- default to never
+        reset = "never"
+    end
+
+    local key = "item" .. tostring(id)
+    TM_TASKS[key] = {
+        itemid = id,
+        title = title,
+        category = category,
+        reset = reset,
+        priority = priority
+    }
+
+    addon:NormalizeTaskPriority()
+end
+
+function addon:UpdateItem(id)
+    local key = "item" .. tostring(id)
+    if not TM_TASKS[key] then return false end -- not tracked
+
+    if not TM_STATUS[addon.guid][key] then TM_STATUS[addon.guid][key] = {} end
+    local entry = TM_STATUS[addon.guid][key]
+    local be, bc, bp = entry.expires, entry.completed
+
+    -- check if we have valid cooldown info
+    local exists = select('#', C_Container.GetItemCooldown(id))
+    if not exists or exists == 0 then return false end
+
+    -- update item status
+    local start, duration, enable = C_Container.GetItemCooldown(id)
+    if start > 0 and duration > 0 then
+        entry.completed = true
+        entry.expires = floor(start + duration - GetTime() + time())
+    else
+        entry.completed = false
+        entry.expires = nil
+    end
+
+    -- return true if anything changed
+    return bc ~= entry.completed or be ~= entry.expires
+end
+
 function addon:AddBossTask(id, difficulty, boss, title, category, reset, priority)
     if not id then return end
     if not difficulty then return end
@@ -346,6 +392,11 @@ function addon:UpdateAll()
         -- professions
         if task.spellid then
             changed = addon:UpdateProfession(task.spellid) or changed
+        end
+
+        -- items
+        if task.itemid then
+            changed = addon:UpdateItem(task.itemid) or changed
         end
     end
 

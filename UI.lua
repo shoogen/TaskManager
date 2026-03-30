@@ -50,6 +50,12 @@ function addon:TimeFriendly(secs)
     return format(L["TimeLeftDays"], days)
 end
 
+-- determines if the given task can have a different timer for different characters
+function addon:TimeVaries(key)
+    local task = TM_TASKS[key]
+    return task and (task.spellid or task.itemid)
+end
+
 function addon:RefreshWindow()
     if TM_FRAME and TM_FRAME:IsShown() then
         addon:ShowWindow(TM_WINDOW.key, true)
@@ -269,7 +275,7 @@ function addon:CreateTaskFrames()
         -- show task only if visible
         if not COLLAPSED[category] then
             local status = TM_STATUS[addon.guid][key]
-            local expires = addon:TimeLeft(addon.guid, key) -- TODO professions can have different timers for each character
+            local expires = addon:TimeLeft(addon.guid, key) -- TODO professions/items can have different timers for each character. and this will incorrectly show "Daily" if character doesn't have that prof.
             table.insert(sorted, { category = category, sort = task.priority, key = key, checked = status and (status.completed or status.skip), ignored = addon:IsIgnored(addon.guid, key), expires = expires })
         end
     end
@@ -409,9 +415,6 @@ function addon:CreateStatusFrames(key)
 
         -- generate text
         local text = toon.info.level .. " " .. toon.info.name .. "-" .. toon.info.realm
-        if status and status.progress then
-            text = text .. " " .. status.progress
-        end
 
         if guid == addon.guid then
             text = ">" .. text .. "<"
@@ -423,6 +426,17 @@ function addon:CreateStatusFrames(key)
         local color = COLORS[toon.info.class]
         if ignored then color = COLORS.IGNORED end
         text = COLORS.START .. color .. text .. COLORS.END
+
+        if status and status.progress then
+            -- add indicator for quest progress
+            text = text .. " " .. status.progress
+        elseif checked and addon:TimeVaries(key) then
+            -- add timer if it can vary per character
+            local expires = addon:TimeLeft(guid, key)
+            if expires and expires > 0 then
+                text = text .. " (" .. addon:TimeFriendly(expires) .. ")"
+            end
+        end
 
         -- determine sort
         local sort = "1"
@@ -670,6 +684,11 @@ function addon:CreateAddTaskFrame()
                 f.editProfession:SetShown(isprof)
                 f.editProfession:SetText("")
 
+                local isitem = (arg1 == "item")
+                f.labelItem:SetShown(isitem)
+                f.editItem:SetShown(isitem)
+                f.editItem:SetText("")
+
                 local isboss = (arg1 == "boss")
                 f.labelBoss:SetShown(isboss)
                 f.editBoss:SetShown(isboss)
@@ -686,6 +705,8 @@ function addon:CreateAddTaskFrame()
                     f.labelTitle:SetPoint("TOPLEFT", f.labelQuest, "BOTTOMLEFT", 0, -20)
                 elseif isprof then
                     f.labelTitle:SetPoint("TOPLEFT", f.labelProfession, "BOTTOMLEFT", 0, -20)
+                elseif isitem then
+                    f.labelTitle:SetPoint("TOPLEFT", f.labelItem, "BOTTOMLEFT", 0, -20)
                 elseif isboss then
                     f.labelTitle:SetPoint("TOPLEFT", f.labelBoss, "BOTTOMLEFT", 0, -20)
                 else
@@ -700,6 +721,7 @@ function addon:CreateAddTaskFrame()
             UIDropDownMenu_AddButton({ text = L["quest"], arg1 = "quest", func = func })
             UIDropDownMenu_AddButton({ text = L["boss"], arg1 = "boss", func = func })
             UIDropDownMenu_AddButton({ text = L["profession"], arg1 = "profession", func = func })
+            UIDropDownMenu_AddButton({ text = L["item"], arg1 = "item", func = func })
             UIDropDownMenu_AddButton({ text = L["vault"], arg1 = "vault", func = func })
         end)
     end
@@ -787,6 +809,44 @@ function addon:CreateAddTaskFrame()
     f.editProfession:Hide()
     f.editProfession:Enable()
     f.editProfession:SetText("")
+
+    -- Item ID field
+    if not f.labelItem then
+        f.labelItem = f.taskDialog:CreateFontString(nil, "OVERLAY", "GameTooltipText")
+        f.labelItem:SetPoint("TOPLEFT", f.labelType, "BOTTOMLEFT", 0, -20)
+        f.labelItem:SetText(L["DialogItem"])
+    end
+
+    f.labelItem:Hide()
+
+    if not f.editItem then
+        f.editItem = CreateFrame("EditBox", nil, f.taskDialog, "InputBoxTemplate")
+        f.editItem:SetSize(100, 22)
+        f.editItem:SetNumeric(true)
+        f.editItem:SetAutoFocus(false)
+        f.editItem:SetPoint("LEFT", f.labelItem, "LEFT", 100, 0)
+
+        f.editItem:SetScript("OnTextChanged", function(self, userInput)
+            if not userInput then return end
+
+            local id = self:GetNumber()
+            local title = GetItemInfo(id)
+
+            f.saveButton:SetEnabled(id > 0)
+
+            if id < 1 then
+                f.editTitle:SetText("")
+            elseif title then
+                f.editTitle:SetText(title)
+            else
+                f.editTitle:SetText(format(L["MissingItem"], id))
+            end
+        end)
+    end
+
+    f.editItem:Hide()
+    f.editItem:Enable()
+    f.editItem:SetText("")
 
     -- Boss IDs
     if not f.labelBoss then
@@ -934,6 +994,9 @@ function addon:CreateAddTaskFrame()
             elseif f.editProfession:IsShown() then
                 local spell = f.editProfession:GetNumber()
                 addon:AddProfessionTask(spell, title, category, f.dropdownReset.value, f.priority)
+            elseif f.editItem:IsShown() then
+                local item = f.editItem:GetNumber()
+                addon:AddItemTask(item, title, category, f.dropdownReset.value, f.priority)
             elseif f.editBoss:IsShown() then
                 addon:AddBossTask(f.editBoss.instanceid, f.editBoss.difficulty, f.editBoss.boss, title, category, f.dropdownReset.value, f.priority)
             elseif f.dropdownType.value == "vault" then
@@ -999,6 +1062,19 @@ function addon:MenuEditTask(f)
 
         -- positioning
         TM_FRAME.labelTitle:SetPoint("TOPLEFT", TM_FRAME.labelProfession, "BOTTOMLEFT", 0, -20)
+    elseif task.itemid then
+        TM_FRAME.dropdownType.value = "item"
+        UIDropDownMenu_SetText(TM_FRAME.dropdownType, L["item"])
+
+        -- setup spell id
+        TM_FRAME.labelItem:Show()
+
+        TM_FRAME.editItem:Show()
+        TM_FRAME.editItem:Disable()
+        TM_FRAME.editItem:SetText(task.itemid or "")
+
+        -- positioning
+        TM_FRAME.labelTitle:SetPoint("TOPLEFT", TM_FRAME.labelItem, "BOTTOMLEFT", 0, -20)
     elseif f.key == "vault" then
         TM_FRAME.dropdownType.value = "vault"
         UIDropDownMenu_SetText(TM_FRAME.dropdownType, L["vault"])

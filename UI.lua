@@ -12,7 +12,7 @@ local COLORS = {
     WARN = "fff468",
 
     PROGRESS = "fff468",
-    IGNORED = "c0c0c0",
+    IGNORED = "606060",
     DONE = "00ffba",
 
     WARRIOR = "c69b6d",
@@ -126,6 +126,7 @@ function addon:CreateMainFrame()
     f:SetPortraitToAsset("Interface\\Icons\\inv_10_inscription_illusoryspellscrolls_color10")
 
     f:SetSize(TM_WINDOW.width or 333, TM_WINDOW.height or 500)
+    f:SetScale(TM_WINDOW.scale or 1.0)
     if TM_WINDOW.top then
         f:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", TM_WINDOW.left, TM_WINDOW.top)
     else
@@ -389,7 +390,10 @@ function addon:CreateTaskFrame(parent)
     end
 
     f.title:SetScript("OnMouseUp", function(self, button)
-        if button == "RightButton" then
+        if button == "LeftButton" and IsShiftKeyDown() then
+            addon:IgnoreTask(addon.guid, f.key, not addon:IsIgnored(addon.guid, f.key))
+            addon:RefreshWindow()
+        elseif button == "RightButton" then
             UIDropDownMenu_Initialize(TM_FRAME.menu, function(frame, level, menuList)
                 UIDropDownMenu_AddButton({ text = L["SkipAllTask"], arg1 = f, arg2 = true, func = addon.MenuSkipAllTask })
                 UIDropDownMenu_AddButton({ text = L["UnskipAllTask"], arg1 = f, arg2 = false, func = addon.MenuSkipAllTask })

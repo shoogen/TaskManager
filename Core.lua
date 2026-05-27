@@ -533,3 +533,14 @@ function addon:NormalizeTaskPriority()
         task.priority = i
     end
 end
+
+function addon:RenameCategory(from, to)
+    to = addon:Trim(to)
+    if to ~= nil then
+        for key, task in pairs(TM_TASKS) do
+            if task.category == from then
+                task.category = to
+            end
+        end
+    end
+end

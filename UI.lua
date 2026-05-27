@@ -4,7 +4,6 @@ local events = {}
 local L = LibStub("AceLocale-3.0"):GetLocale("TaskManager")
 
 local MAXINT = 10 ^ 300
-local COLLAPSED = {}
 local COLORS = {
     START = "\124cFF",
     END = "\124r",
@@ -267,13 +266,13 @@ function addon:CreateTaskFrames()
 
         -- count # categories
         if not categories[category] then count = count + 1 end
-        if COLLAPSED[category] then count = 69 end -- force show
+        if TM_COLLAPSED[category] then count = 69 end -- force show
 
         -- assign category priority
         categories[category] = min(categories[category] or MAXINT, task.priority - .1)
 
         -- show task only if visible
-        if not COLLAPSED[category] then
+        if not TM_COLLAPSED[category] then
             local status = TM_STATUS[addon.guid][key]
             local expires = addon:TimeLeft(addon.guid, key) -- TODO professions/items can have different timers for each character. and this will incorrectly show "Daily" if character doesn't have that prof.
             table.insert(sorted, { category = category, sort = task.priority, key = key, checked = status and (status.completed or status.skip), ignored = addon:IsIgnored(addon.guid, key), expires = expires })
@@ -304,7 +303,7 @@ function addon:CreateTaskFrames()
         else
             local f = row:ShowWidget("category", addon.CreateCategoryFrame)
             f.Name:SetText(entry.category)
-            f:SetCollapsed(COLLAPSED[entry.category])
+            f:SetCollapsed(TM_COLLAPSED[entry.category])
         end
     end
 end
@@ -323,10 +322,17 @@ function addon:CreateCategoryFrame(parent)
         f:UpdateCollapsedState(collapsed)
     end
 
-    f:SetScript("OnClick", function()
-        local category = f.Name:GetText()
-        COLLAPSED[category] = not COLLAPSED[category]
-        addon:RefreshWindow()
+    f:SetScript("OnMouseUp", function(self, button)
+        if button == "RightButton" then
+            UIDropDownMenu_Initialize(TM_FRAME.menu, function(frame, level, menuList)
+                UIDropDownMenu_AddButton({ text = L["RenameCategory"], arg1 = f.Name:GetText(), func = addon.MenuRenameCategory })
+            end, "MENU")
+            ToggleDropDownMenu(1, nil, TM_FRAME.menu, "cursor", 0, 0)
+        else
+            local category = f.Name:GetText()
+            TM_COLLAPSED[category] = not TM_COLLAPSED[category]
+            addon:RefreshWindow()
+        end
     end)
 
     addon:AddGrip(f)
@@ -607,7 +613,7 @@ function addon:DropRow(frame)
             -- dropped near a category
             local category = widget.Name:GetText()
             task.category = category
-            task.priority = COLLAPSED[category] and MAXINT or -1
+            task.priority = TM_COLLAPSED[category] and MAXINT or -1
         end
     elseif frame.name == "category" then
         -- moving an entire category
@@ -1145,3 +1151,25 @@ function addon:MenuSelectBoss(info)
     -- force the menu to close
     CloseDropDownMenus()
 end
+
+function addon:MenuRenameCategory(from)
+    StaticPopup_Show("TM_RENAME_DIALOG", nil, nil, { from = from })
+end
+
+StaticPopupDialogs["TM_RENAME_DIALOG"] = {
+    text = "Enter new category name:",
+    button1 = "OK",
+    button2 = "Cancel",
+    hasEditBox = true,
+    OnAccept = function(self, data)
+        addon:RenameCategory(data.from, self:GetEditBox():GetText())
+        addon:RefreshWindow()
+    end,
+    EditBoxOnEnterPressed = function(self, data)
+        addon:RenameCategory(data.from, self:GetText())
+        StaticPopup_Hide("TM_RENAME_DIALOG")
+        addon:RefreshWindow()
+    end,
+    timeout = 0,
+    whileDead = true,
+}

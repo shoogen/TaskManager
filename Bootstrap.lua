@@ -15,6 +15,7 @@ function addon:OnInitialize()
     -- TODO and/or use import strings so people can share QuestIDs they find
     if not TM_TASKS then TM_TASKS = {} end
     if not TM_STATUS then TM_STATUS = {} end
+    if not TM_COLLAPSED then TM_COLLAPSED = {} end
     if not TM_WINDOW then TM_WINDOW = { width = 333, height = 500 } end
 
     LibStub:GetLibrary("LibDataBroker-1.1"):NewDataObject(L["Title"], {

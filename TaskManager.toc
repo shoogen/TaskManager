@@ -5,7 +5,7 @@
 ## Version: @project-version@
 ## X-Curse-Project-ID: 949024
 ## X-Wago-ID: mKOvlW6x
-## SavedVariables: TM_TASKS,TM_STATUS,TM_WINDOW
+## SavedVariables: TM_TASKS,TM_STATUS,TM_WINDOW,TM_COLLAPSED
 ## AddonCompartmentFunc: TM_AddonCompartmentFunc
 
 Libs\LibStub\LibStub.lua

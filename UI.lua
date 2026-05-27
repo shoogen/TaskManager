@@ -403,6 +403,9 @@ function addon:CreateTaskFrame(parent)
                 UIDropDownMenu_AddButton({ text = L["RemoveTask"], arg1 = f, func = addon.MenuRemoveTask })
             end, "MENU")
             ToggleDropDownMenu(1, nil, TM_FRAME.menu, "cursor", 0, 0)
+        elseif IsShiftKeyDown() then
+            addon:IgnoreTask(addon.guid, f.key, not addon:IsIgnored(addon.guid, f.key))
+            addon:RefreshWindow()
         else
             addon:ShowWindow(f.key)
         end

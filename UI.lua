@@ -322,7 +322,10 @@ function addon:CreateCategoryFrame(parent)
         f:UpdateCollapsedState(collapsed)
     end
 
+    local PrevMouseUp = f:GetScript("OnMouseUp")
     f:SetScript("OnMouseUp", function(self, button)
+        if PrevMouseUp then PrevMouseUp(self, button) end
+
         if button == "RightButton" then
             UIDropDownMenu_Initialize(TM_FRAME.menu, function(frame, level, menuList)
                 UIDropDownMenu_AddButton({ text = L["RenameCategory"], arg1 = f.Name:GetText(), func = addon.MenuRenameCategory })

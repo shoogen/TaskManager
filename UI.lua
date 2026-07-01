@@ -29,6 +29,21 @@ local COLORS = {
     EVOKER = "33937F"
 }
 
+local QUICK = {
+    ALL = function() return true end,
+    LEVEL = function(min, max)
+        return function(guid)
+            local level = TM_STATUS[guid].info.level
+            return level >= min and level < max
+        end
+    end,
+    CLASS = function(c)
+        return function(guid)
+            return TM_STATUS[guid].info.class == c
+        end
+    end
+}
+
 function addon:Trim(str)
     if str == nil then return nil end
 
@@ -80,6 +95,8 @@ function addon:ShowWindow(key, refresh)
     end
 
     TM_FRAME.backButton:Hide()
+    TM_FRAME.quickAddButton:Hide()
+    TM_FRAME.quickRemoveButton:Hide()
     TM_FRAME.plusButton:Hide()
     TM_FRAME.taskDialog:Hide()
 
@@ -94,6 +111,10 @@ function addon:ShowWindow(key, refresh)
         end
     elseif key then
         TM_FRAME.backButton:Show()
+        TM_FRAME.quickAddButton:Show()
+        TM_FRAME.quickRemoveButton:Show()
+        TM_FRAME.quickAddButton.key = key
+        TM_FRAME.quickRemoveButton.key = key
         TM_FRAME.header:SetText(TM_TASKS[key].title)
         addon:CreateStatusFrames(key)
     else
@@ -181,10 +202,66 @@ function addon:CreateMainFrame()
     end)
 
     -- Buttons
+    f.quickAddButton = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+    f.quickAddButton:SetSize(30, 22)
+    f.quickAddButton:SetText(L["QuickAdd"])
+    f.quickAddButton:SetPoint("RIGHT", f, "TOPRIGHT", -8, -38)
+    f.quickAddButton:SetScript("OnClick", function()
+        UIDropDownMenu_Initialize(TM_FRAME.menu, function(frame, level, menuList)
+            UIDropDownMenu_AddButton({ text = L["QuickAll"], arg1 = { key = f.quickAddButton.key, matcher = QUICK.ALL, ignore = false }, func = addon.MenuQuick })
+
+            UIDropDownMenu_AddButton({ text = L["Quick90"], arg1 = { key = f.quickAddButton.key, matcher = QUICK.LEVEL(90, 100), ignore = false }, func = addon.MenuQuick })
+            UIDropDownMenu_AddButton({ text = L["Quick80"], arg1 = { key = f.quickAddButton.key, matcher = QUICK.LEVEL(80, 90), ignore = false }, func = addon.MenuQuick })
+
+            UIDropDownMenu_AddButton({ text = L["QuickDeathKnight"], arg1 = { key = f.quickAddButton.key, matcher = QUICK.CLASS("DEATHKNIGHT"), ignore = false }, func = addon.MenuQuick })
+            UIDropDownMenu_AddButton({ text = L["QuickDemonHunter"], arg1 = { key = f.quickAddButton.key, matcher = QUICK.CLASS("DEMONHUNTER"), ignore = false }, func = addon.MenuQuick })
+            UIDropDownMenu_AddButton({ text = L["QuickDruid"], arg1 = { key = f.quickAddButton.key, matcher = QUICK.CLASS("DRUID"), ignore = false }, func = addon.MenuQuick })
+            UIDropDownMenu_AddButton({ text = L["QuickEvoker"], arg1 = { key = f.quickAddButton.key, matcher = QUICK.CLASS("EVOKER"), ignore = false }, func = addon.MenuQuick })
+            UIDropDownMenu_AddButton({ text = L["QuickHunter"], arg1 = { key = f.quickAddButton.key, matcher = QUICK.CLASS("HUNTER"), ignore = false }, func = addon.MenuQuick })
+            UIDropDownMenu_AddButton({ text = L["QuickMage"], arg1 = { key = f.quickAddButton.key, matcher = QUICK.CLASS("MAGE"), ignore = false }, func = addon.MenuQuick })
+            UIDropDownMenu_AddButton({ text = L["QuickMonk"], arg1 = { key = f.quickAddButton.key, matcher = QUICK.CLASS("MONK"), ignore = false }, func = addon.MenuQuick })
+            UIDropDownMenu_AddButton({ text = L["QuickPaladin"], arg1 = { key = f.quickAddButton.key, matcher = QUICK.CLASS("PALADIN"), ignore = false }, func = addon.MenuQuick })
+            UIDropDownMenu_AddButton({ text = L["QuickPriest"], arg1 = { key = f.quickAddButton.key, matcher = QUICK.CLASS("PRIEST"), ignore = false }, func = addon.MenuQuick })
+            UIDropDownMenu_AddButton({ text = L["QuickRogue"], arg1 = { key = f.quickAddButton.key, matcher = QUICK.CLASS("ROGUE"), ignore = false }, func = addon.MenuQuick })
+            UIDropDownMenu_AddButton({ text = L["QuickShaman"], arg1 = { key = f.quickAddButton.key, matcher = QUICK.CLASS("SHAMAN"), ignore = false }, func = addon.MenuQuick })
+            UIDropDownMenu_AddButton({ text = L["QuickWarlock"], arg1 = { key = f.quickAddButton.key, matcher = QUICK.CLASS("WARLOCK"), ignore = false }, func = addon.MenuQuick })
+            UIDropDownMenu_AddButton({ text = L["QuickWarrior"], arg1 = { key = f.quickAddButton.key, matcher = QUICK.CLASS("WARRIOR"), ignore = false }, func = addon.MenuQuick })
+        end, "MENU")
+        ToggleDropDownMenu(1, nil, TM_FRAME.menu, "cursor", 0, 0)
+    end)
+
+    f.quickRemoveButton = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+    f.quickRemoveButton:SetSize(30, 22)
+    f.quickRemoveButton:SetText(L["QuickRemove"])
+    f.quickRemoveButton:SetPoint("RIGHT", f.quickAddButton, "LEFT", 0, 0)
+    f.quickRemoveButton:SetScript("OnClick", function()
+        UIDropDownMenu_Initialize(TM_FRAME.menu, function(frame, level, menuList)
+            UIDropDownMenu_AddButton({ text = L["QuickAll"], arg1 = { key = f.quickRemoveButton.key, matcher = QUICK.ALL, ignore = true }, func = addon.MenuQuick })
+
+            UIDropDownMenu_AddButton({ text = L["Quick90"], arg1 = { key = f.quickRemoveButton.key, matcher = QUICK.LEVEL(90, 100), ignore = true }, func = addon.MenuQuick })
+            UIDropDownMenu_AddButton({ text = L["Quick80"], arg1 = { key = f.quickRemoveButton.key, matcher = QUICK.LEVEL(80, 90), ignore = true }, func = addon.MenuQuick })
+
+            UIDropDownMenu_AddButton({ text = L["QuickDeathKnight"], arg1 = { key = f.quickAddButton.key, matcher = QUICK.CLASS("DEATHKNIGHT"), ignore = true }, func = addon.MenuQuick })
+            UIDropDownMenu_AddButton({ text = L["QuickDemonHunter"], arg1 = { key = f.quickAddButton.key, matcher = QUICK.CLASS("DEMONHUNTER"), ignore = true }, func = addon.MenuQuick })
+            UIDropDownMenu_AddButton({ text = L["QuickDruid"], arg1 = { key = f.quickAddButton.key, matcher = QUICK.CLASS("DRUID"), ignore = true }, func = addon.MenuQuick })
+            UIDropDownMenu_AddButton({ text = L["QuickEvoker"], arg1 = { key = f.quickAddButton.key, matcher = QUICK.CLASS("EVOKER"), ignore = true }, func = addon.MenuQuick })
+            UIDropDownMenu_AddButton({ text = L["QuickHunter"], arg1 = { key = f.quickAddButton.key, matcher = QUICK.CLASS("HUNTER"), ignore = true }, func = addon.MenuQuick })
+            UIDropDownMenu_AddButton({ text = L["QuickMage"], arg1 = { key = f.quickAddButton.key, matcher = QUICK.CLASS("MAGE"), ignore = true }, func = addon.MenuQuick })
+            UIDropDownMenu_AddButton({ text = L["QuickMonk"], arg1 = { key = f.quickAddButton.key, matcher = QUICK.CLASS("MONK"), ignore = true }, func = addon.MenuQuick })
+            UIDropDownMenu_AddButton({ text = L["QuickPaladin"], arg1 = { key = f.quickAddButton.key, matcher = QUICK.CLASS("PALADIN"), ignore = true }, func = addon.MenuQuick })
+            UIDropDownMenu_AddButton({ text = L["QuickPriest"], arg1 = { key = f.quickAddButton.key, matcher = QUICK.CLASS("PRIEST"), ignore = true }, func = addon.MenuQuick })
+            UIDropDownMenu_AddButton({ text = L["QuickRogue"], arg1 = { key = f.quickAddButton.key, matcher = QUICK.CLASS("ROGUE"), ignore = true }, func = addon.MenuQuick })
+            UIDropDownMenu_AddButton({ text = L["QuickShaman"], arg1 = { key = f.quickAddButton.key, matcher = QUICK.CLASS("SHAMAN"), ignore = true }, func = addon.MenuQuick })
+            UIDropDownMenu_AddButton({ text = L["QuickWarlock"], arg1 = { key = f.quickAddButton.key, matcher = QUICK.CLASS("WARLOCK"), ignore = true }, func = addon.MenuQuick })
+            UIDropDownMenu_AddButton({ text = L["QuickWarrior"], arg1 = { key = f.quickAddButton.key, matcher = QUICK.CLASS("WARRIOR"), ignore = true }, func = addon.MenuQuick })
+        end, "MENU")
+        ToggleDropDownMenu(1, nil, TM_FRAME.menu, "cursor", 0, 0)
+    end)
+
     f.backButton = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
     f.backButton:SetSize(80, 22)
     f.backButton:SetText(L["BackButton"])
-    f.backButton:SetPoint("RIGHT", f, "TOPRIGHT", -8, -38)
+    f.backButton:SetPoint("RIGHT", f.quickRemoveButton, "LEFT", 0, 0)
     f.backButton:SetScript("OnClick", function() addon:ShowWindow() end)
 
     f.plusButton = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
@@ -1160,6 +1237,16 @@ end
 
 function addon:MenuRenameCategory(from)
     StaticPopup_Show("TM_RENAME_DIALOG", nil, nil, { from = from })
+end
+
+function addon:MenuQuick(options)
+    for guid, toon in pairs(TM_STATUS) do
+        if options.matcher(guid) then
+            addon:IgnoreTask(guid, options.key, options.ignore)
+        end
+    end
+
+    addon:RefreshWindow()
 end
 
 StaticPopupDialogs["TM_RENAME_DIALOG"] = {
